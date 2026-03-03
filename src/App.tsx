@@ -1,7 +1,7 @@
-import { ComponentExample } from "@/components/component-example";
+import { Header } from './components/layout/Header';
 
 export function App() {
-return <ComponentExample />;
+  return <Header />;
 }
 
 export default App;
