@@ -1,4 +1,4 @@
-// import { EmptyProject } from '@/components/dashboard/EmptyProject';
+import { EmptyProject } from '@/components/dashboard/EmptyProject';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -8,9 +8,22 @@ import {
 export const Dashboard = () => {
   return (
     <ResizablePanelGroup orientation="horizontal">
-      <ResizablePanel>One</ResizablePanel>
+      {/* Graphs and Tables Area */}
+      <ResizablePanel
+        defaultSize="20%"
+        className="flex justify-center items-center"
+      >
+        Graphs and Tables Area
+      </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel>Two</ResizablePanel>
+
+      {/* Video Viewport */}
+      <ResizablePanel
+        defaultSize="80%"
+        className="flex justify-center items-center"
+      >
+        <EmptyProject />
+      </ResizablePanel>
     </ResizablePanelGroup>
   );
 };
