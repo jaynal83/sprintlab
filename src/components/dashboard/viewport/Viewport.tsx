@@ -3,6 +3,8 @@ import { FilePlayIcon } from 'lucide-react';
 import { Clock } from 'lucide-react';
 import { IconDimensions } from '@tabler/icons-react';
 
+import { ControlPanel } from './ControlPanel';
+
 export const Viewport = () => {
   const sectionHeights = {
     header: '1.25rem',
@@ -15,7 +17,7 @@ export const Viewport = () => {
         style={{ height: sectionHeights.header }}
         className="text-xs flex items-center justify-start gap-4 border border-t-0 shrink-0"
       >
-        <span className="h-full flex justify-center items-center bg-[#343434] py-0.5 px-1">
+        <span className="h-full flex justify-center items-center dark:bg-[#343434] bg-[#CBCBCB] py-0.5 px-1">
           VIEWPORT
         </span>
         <div className="flex items-center">
@@ -40,9 +42,7 @@ export const Viewport = () => {
         style={{ height: sectionHeights.controlSection }}
         className="border shrink-0"
       >
-        <>
-          <></>
-        </>
+        <ControlPanel />
       </section>
     </div>
   );
