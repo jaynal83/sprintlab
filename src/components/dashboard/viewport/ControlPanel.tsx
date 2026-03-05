@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -7,6 +7,8 @@ import {
   ChevronFirst,
   ChevronLast,
   Gauge,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -32,6 +34,10 @@ interface ControlPanelProps {
   setIsPlaying: (v: boolean | ((p: boolean) => boolean)) => void;
   playbackRate: number;
   setPlaybackRate: (v: number) => void;
+  volume: number;
+  setVolume: (v: number) => void;
+  isMuted: boolean;
+  setIsMuted: (v: boolean) => void;
   onSeekToFrame: (frame: number) => void;
   getCurrentTime: () => number;
   disabled?: boolean;
@@ -42,11 +48,13 @@ function IconBtn({
   tooltip,
   children,
   disabled = false,
+  active = false,
 }: {
   onClick: () => void;
   tooltip: string;
   children: React.ReactNode;
   disabled?: boolean;
+  active?: boolean;
 }) {
   return (
     <Tooltip>
@@ -60,7 +68,9 @@ function IconBtn({
             ${
               disabled
                 ? 'opacity-25 cursor-not-allowed border-transparent'
-                : 'border-zinc-400 text-zinc-700 dark:text-zinc-300 hover:border-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:border-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer'
+                : active
+                  ? 'bg-sky-600/20 border-sky-500/60 text-sky-500 cursor-pointer'
+                  : 'border-zinc-400 text-zinc-700 dark:text-zinc-300 hover:border-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:border-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer'
             }
           `}
         >
@@ -93,20 +103,26 @@ export function ControlPanel({
   setIsPlaying,
   playbackRate,
   setPlaybackRate,
+  volume,
+  setVolume,
+  isMuted,
+  setIsMuted,
   onSeekToFrame,
   getCurrentTime,
   disabled = false,
 }: ControlPanelProps) {
+  const effectiveFps = (fps || 30) * playbackRate;
+  const frameDuration = 1 / (fps || 30);
+  const decimalPlaces = Math.ceil(-Math.log10(frameDuration));
   const frameToTimecode = (frame: number) => {
     const totalSecs = frame / (fps || 30);
     const mins = Math.floor(totalSecs / 60)
       .toString()
       .padStart(2, '0');
-    const secs = Math.floor(totalSecs % 60)
-      .toString()
-      .padStart(2, '0');
-    const frames = (frame % (fps || 30)).toString().padStart(2, '0');
-    return `${mins}:${secs}:${frames}`;
+    const secs = (totalSecs % 60)
+      .toFixed(decimalPlaces)
+      .padStart(3 + decimalPlaces, '0');
+    return `${mins}:${secs}`;
   };
 
   const stepForward = useCallback(() => {
@@ -151,8 +167,7 @@ export function ControlPanel({
       0,
       Math.min(1, (e.clientX - rect.left) / rect.width),
     );
-    const frame = Math.round(ratio * (totalFrames - 1));
-    onSeekToFrame(frame);
+    onSeekToFrame(Math.round(ratio * (totalFrames - 1)));
   };
 
   return (
@@ -212,10 +227,14 @@ export function ControlPanel({
             <Readout
               label="Duration"
               value={
-                totalFrames > 0 ? frameToTimecode(totalFrames - 1) : '00:00:00'
+                totalFrames > 0 ? frameToTimecode(totalFrames - 1) : '00:00.000'
               }
             />
-            <Readout label="FPS" value={`${(fps || 30) * playbackRate}`} />
+            <Readout label="FPS" value={`${effectiveFps}`} />
+            <Readout
+              label="∆/frame"
+              value={`${frameDuration.toFixed(decimalPlaces)}s`}
+            />
           </div>
 
           {/* Divider */}
@@ -287,6 +306,39 @@ export function ControlPanel({
                 ))}
               </SelectContent>
             </Select>
+
+            <div className="h-6 w-px bg-zinc-300 dark:bg-zinc-600 mx-1" />
+
+            {/* Audio controls */}
+            <IconBtn
+              onClick={() => setIsMuted(!isMuted)}
+              tooltip={isMuted ? 'Unmute (M)' : 'Mute (M)'}
+              active={isMuted}
+            >
+              {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+            </IconBtn>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={isMuted ? 0 : volume}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setVolume(v);
+                    if (v > 0 && isMuted) setIsMuted(false);
+                    if (v === 0) setIsMuted(true);
+                  }}
+                  className="w-20 h-1.5 accent-sky-500 cursor-pointer"
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                Volume {Math.round((isMuted ? 0 : volume) * 100)}%
+              </TooltipContent>
+            </Tooltip>
 
             {/* Keyboard hints */}
             <div className="ml-auto flex items-center gap-2">

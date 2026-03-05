@@ -4,6 +4,8 @@ interface VideoLayerProps {
   src: string;
   playbackRate: number;
   isPlaying: boolean;
+  volume: number; // 0–1
+  isMuted: boolean;
   onTimeUpdate: (currentTime: number) => void;
   onVideoReady: (
     seek: (time: number) => void,
@@ -15,6 +17,8 @@ export const VideoLayer = ({
   src,
   playbackRate,
   isPlaying,
+  volume,
+  isMuted,
   onTimeUpdate,
   onVideoReady,
 }: VideoLayerProps) => {
@@ -52,7 +56,6 @@ export const VideoLayer = ({
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
-      // Push one final update so UI reflects paused position
       onTimeUpdate(video.currentTime);
     }
 
@@ -70,6 +73,14 @@ export const VideoLayer = ({
     if (!video) return;
     video.playbackRate = playbackRate;
   }, [playbackRate]);
+
+  // Sync volume and mute
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.volume = volume;
+    video.muted = isMuted;
+  }, [volume, isMuted]);
 
   return (
     <video

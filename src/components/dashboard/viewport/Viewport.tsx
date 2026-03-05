@@ -24,6 +24,8 @@ export const Viewport = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Imperative handles exposed by VideoLayer
@@ -144,6 +146,8 @@ export const Viewport = () => {
               src={videoMeta.src}
               playbackRate={playbackRate}
               isPlaying={isPlaying}
+              volume={volume}
+              isMuted={isMuted}
               onTimeUpdate={setCurrentTime}
               onVideoReady={(seek, getTime) => {
                 seekVideo.current = seek;
@@ -199,6 +203,10 @@ export const Viewport = () => {
           setIsPlaying={setIsPlaying}
           playbackRate={playbackRate}
           setPlaybackRate={setPlaybackRate}
+          volume={volume}
+          setVolume={setVolume}
+          isMuted={isMuted}
+          setIsMuted={setIsMuted}
           onSeekToFrame={handleSeekToFrame}
           getCurrentTime={getCurrentTime}
           disabled={!videoMeta}
