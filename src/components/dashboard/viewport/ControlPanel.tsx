@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import {
   Play,
   Pause,
@@ -26,11 +26,14 @@ const SPEED_OPTIONS = [0.25, 0.5, 1, 1.5, 2, 4];
 
 interface ControlPanelProps {
   currentFrame: number;
-  setCurrentFrame: (frame: number | ((f: number) => number)) => void;
   totalFrames: number;
   fps: number;
   isPlaying: boolean;
-  setIsPlaying: (playing: boolean | ((p: boolean) => boolean)) => void;
+  setIsPlaying: (v: boolean | ((p: boolean) => boolean)) => void;
+  playbackRate: number;
+  setPlaybackRate: (v: number) => void;
+  onSeekToFrame: (frame: number) => void;
+  getCurrentTime: () => number;
   disabled?: boolean;
 }
 
@@ -38,13 +41,11 @@ function IconBtn({
   onClick,
   tooltip,
   children,
-  active = false,
   disabled = false,
 }: {
   onClick: () => void;
   tooltip: string;
   children: React.ReactNode;
-  active?: boolean;
   disabled?: boolean;
 }) {
   return (
@@ -59,9 +60,7 @@ function IconBtn({
             ${
               disabled
                 ? 'opacity-25 cursor-not-allowed border-transparent'
-                : active
-                  ? 'bg-sky-600/20 border-sky-500/60 text-sky-400 cursor-pointer'
-                  : 'border-zinc-400 text-zinc-700 dark:text-zinc-300 hover:border-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:border-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer'
+                : 'border-zinc-400 text-zinc-700 dark:text-zinc-300 hover:border-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:border-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer'
             }
           `}
         >
@@ -88,16 +87,16 @@ function Readout({ label, value }: { label: string; value: string }) {
 
 export function ControlPanel({
   currentFrame,
-  setCurrentFrame,
   totalFrames,
   fps,
   isPlaying,
   setIsPlaying,
+  playbackRate,
+  setPlaybackRate,
+  onSeekToFrame,
+  getCurrentTime,
   disabled = false,
 }: ControlPanelProps) {
-  const [speed, setSpeed] = useState(1);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const frameToTimecode = (frame: number) => {
     const totalSecs = frame / (fps || 30);
     const mins = Math.floor(totalSecs / 60)
@@ -111,20 +110,22 @@ export function ControlPanel({
   };
 
   const stepForward = useCallback(() => {
-    setCurrentFrame((f) => Math.min(f + 1, totalFrames - 1));
-  }, [setCurrentFrame, totalFrames]);
+    setIsPlaying(false);
+    onSeekToFrame(Math.min(currentFrame + 1, totalFrames - 1));
+  }, [currentFrame, totalFrames, onSeekToFrame, setIsPlaying]);
 
   const stepBack = useCallback(() => {
-    setCurrentFrame((f) => Math.max(f - 1, 0));
-  }, [setCurrentFrame]);
+    setIsPlaying(false);
+    onSeekToFrame(Math.max(currentFrame - 1, 0));
+  }, [currentFrame, onSeekToFrame, setIsPlaying]);
 
   const jumpToStart = () => {
-    setCurrentFrame(0);
     setIsPlaying(false);
+    onSeekToFrame(0);
   };
   const jumpToEnd = () => {
-    setCurrentFrame(totalFrames - 1);
     setIsPlaying(false);
+    onSeekToFrame(totalFrames - 1);
   };
 
   // Keyboard controls
@@ -132,49 +133,13 @@ export function ControlPanel({
     if (disabled) return;
     const onKey = (e: KeyboardEvent) => {
       if (['ArrowRight', 'ArrowLeft', ' '].includes(e.key)) e.preventDefault();
-      if (e.key === 'ArrowRight') {
-        setIsPlaying(false);
-        stepForward();
-      }
-      if (e.key === 'ArrowLeft') {
-        setIsPlaying(false);
-        stepBack();
-      }
-      if (e.key === ' ') {
-        setIsPlaying((p) => !p);
-      }
+      if (e.key === 'ArrowRight') stepForward();
+      if (e.key === 'ArrowLeft') stepBack();
+      if (e.key === ' ') setIsPlaying((p) => !p);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [stepForward, stepBack, setIsPlaying, disabled]);
-
-  // Playback loop
-  useEffect(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (isPlaying && !disabled) {
-      const ms = 1000 / (fps || 30) / speed;
-      intervalRef.current = setInterval(() => {
-        setCurrentFrame((f) => {
-          if (f >= totalFrames - 1) {
-            setIsPlaying(false);
-            return f;
-          }
-          return f + 1;
-        });
-      }, ms);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [
-    isPlaying,
-    fps,
-    speed,
-    totalFrames,
-    setCurrentFrame,
-    setIsPlaying,
-    disabled,
-  ]);
 
   const progress =
     totalFrames > 1 ? (currentFrame / (totalFrames - 1)) * 100 : 0;
@@ -186,7 +151,8 @@ export function ControlPanel({
       0,
       Math.min(1, (e.clientX - rect.left) / rect.width),
     );
-    setCurrentFrame(Math.round(ratio * (totalFrames - 1)));
+    const frame = Math.round(ratio * (totalFrames - 1));
+    onSeekToFrame(frame);
   };
 
   return (
@@ -249,7 +215,7 @@ export function ControlPanel({
                 totalFrames > 0 ? frameToTimecode(totalFrames - 1) : '00:00:00'
               }
             />
-            <Readout label="FPS" value={`${(fps || 30) * speed}`} />
+            <Readout label="FPS" value={`${(fps || 30) * playbackRate}`} />
           </div>
 
           {/* Divider */}
@@ -261,16 +227,14 @@ export function ControlPanel({
               <ChevronFirst size={14} />
             </IconBtn>
             <IconBtn
-              onClick={() => {
-                setIsPlaying(false);
-                stepBack();
-              }}
+              onClick={stepBack}
               tooltip="Step back (←)"
               disabled={currentFrame === 0}
             >
               <SkipBack size={14} />
             </IconBtn>
 
+            {/* Play / Pause */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -294,10 +258,7 @@ export function ControlPanel({
             </Tooltip>
 
             <IconBtn
-              onClick={() => {
-                setIsPlaying(false);
-                stepForward();
-              }}
+              onClick={stepForward}
               tooltip="Step forward (→)"
               disabled={currentFrame === totalFrames - 1}
             >
@@ -309,11 +270,12 @@ export function ControlPanel({
 
             <div className="h-6 w-px bg-zinc-300 dark:bg-zinc-600 mx-1" />
 
+            {/* Speed selector */}
             <Select
-              value={String(speed)}
-              onValueChange={(v) => setSpeed(Number(v))}
+              value={String(playbackRate)}
+              onValueChange={(v) => setPlaybackRate(Number(v))}
             >
-              <SelectTrigger className="h-7 w-20 text-xs px-2 bg-zinc-50 border-zinc-400 text-zinc-700 dark:text-zinc-300 hover:border-zinc-500 dark:bg-zinc-950 dark:border-zinc-600 dark:hover:border-zinc-500 cursor-pointer">
+              <SelectTrigger className="h-7 w-24 text-xs px-2 bg-zinc-50 border-zinc-400 text-zinc-700 dark:text-zinc-300 hover:border-zinc-500 dark:bg-zinc-950 dark:border-zinc-600 dark:hover:border-zinc-500 cursor-pointer">
                 <Gauge size={12} className="shrink-0" />
                 <SelectValue />
               </SelectTrigger>
@@ -326,6 +288,7 @@ export function ControlPanel({
               </SelectContent>
             </Select>
 
+            {/* Keyboard hints */}
             <div className="ml-auto flex items-center gap-2">
               {[
                 ['←→', 'step'],

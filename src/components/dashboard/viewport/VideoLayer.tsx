@@ -2,46 +2,74 @@ import { useEffect, useRef } from 'react';
 
 interface VideoLayerProps {
   src: string;
-  currentFrame: number;
-  fps: number;
+  playbackRate: number;
   isPlaying: boolean;
-  onVideoRef?: (el: HTMLVideoElement | null) => void;
+  onTimeUpdate: (currentTime: number) => void;
+  onVideoReady: (
+    seek: (time: number) => void,
+    getCurrentTime: () => number,
+  ) => void;
 }
 
 export const VideoLayer = ({
   src,
-  currentFrame,
-  fps,
+  playbackRate,
   isPlaying,
-  onVideoRef,
+  onTimeUpdate,
+  onVideoReady,
 }: VideoLayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const rafRef = useRef<number | null>(null);
 
-  // Expose ref to parent via callback
-  useEffect(() => {
-    onVideoRef?.(videoRef.current);
-  }, [onVideoRef]);
-
-  // Sync play/pause
+  // Expose imperative API to parent once mounted
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (isPlaying) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  }, [isPlaying]);
+    onVideoReady(
+      (time: number) => {
+        video.currentTime = time;
+      },
+      () => video.currentTime,
+    );
+  }, []);
 
-  // Sync frame position when paused
+  // rAF loop drives onTimeUpdate during playback
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || isPlaying) return;
-    const targetTime = currentFrame / fps;
-    if (Math.abs(video.currentTime - targetTime) > 0.001) {
-      video.currentTime = targetTime;
+    if (!video) return;
+
+    const tick = () => {
+      onTimeUpdate(video.currentTime);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    if (isPlaying) {
+      video.play().catch(() => {});
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      video.pause();
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      // Push one final update so UI reflects paused position
+      onTimeUpdate(video.currentTime);
     }
-  }, [currentFrame, fps, isPlaying]);
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [isPlaying]);
+
+  // Sync playback rate
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = playbackRate;
+  }, [playbackRate]);
 
   return (
     <video

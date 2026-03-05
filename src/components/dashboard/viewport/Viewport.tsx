@@ -21,26 +21,31 @@ export const Viewport = () => {
   };
 
   const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
-  const [currentFrame, setCurrentFrame] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Imperative handles exposed by VideoLayer
+  const seekVideo = useRef<(time: number) => void>(() => {});
+  const getVideoTime = useRef<() => number>(() => 0);
+
+  const fps = videoMeta?.fps ?? 30;
+  const totalFrames = videoMeta?.totalFrames ?? 0;
+  const currentFrame = Math.floor(currentTime * fps);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-
-      // Revoke previous object URL if any
       if (videoMeta?.src) URL.revokeObjectURL(videoMeta.src);
 
       const src = URL.createObjectURL(file);
-
-      // Create a temporary video element to read metadata
       const tempVideo = document.createElement('video');
       tempVideo.src = src;
       tempVideo.onloadedmetadata = () => {
         const duration = tempVideo.duration;
-        const fps = 30; // Default — can be made configurable later
+        const fps = 30;
         const totalFrames = Math.floor(duration * fps);
         setVideoMeta({
           src,
@@ -51,12 +56,24 @@ export const Viewport = () => {
           totalFrames,
           duration,
         });
-        setCurrentFrame(0);
+        setCurrentTime(0);
         setIsPlaying(false);
       };
     },
     [videoMeta],
   );
+
+  // Called by ControlPanel — seeks video and syncs React time state
+  const handleSeekToFrame = useCallback(
+    (frame: number) => {
+      const time = frame / fps;
+      seekVideo.current(time);
+      setCurrentTime(time);
+    },
+    [fps],
+  );
+
+  const getCurrentTime = useCallback(() => getVideoTime.current(), []);
 
   const handleUploadClick = () => fileInputRef.current?.click();
 
@@ -67,7 +84,6 @@ export const Viewport = () => {
         style={{ height: sectionHeights.header }}
         className="flex items-center shrink-0 border border-t-0 border-zinc-400 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 gap-3"
       >
-        {/* Section label */}
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
           <span className="text-[9px] uppercase tracking-[0.2em] text-zinc-700 dark:text-zinc-300 font-sans">
@@ -77,7 +93,6 @@ export const Viewport = () => {
 
         <div className="h-4 w-px bg-zinc-400 dark:bg-zinc-600" />
 
-        {/* Metadata readouts */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <FilePlayIcon className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
@@ -99,9 +114,7 @@ export const Viewport = () => {
           </div>
         </div>
 
-        {/* Right side */}
         <div className="ml-auto flex items-center gap-3">
-          {/* Upload button — only shown when video is loaded */}
           {videoMeta && (
             <button
               onClick={handleUploadClick}
@@ -122,22 +135,25 @@ export const Viewport = () => {
         </div>
       </header>
 
-      {/* Video area — layered stack for future overlays */}
+      {/* Video area */}
       <main className="flex-1 border border-zinc-400 dark:border-zinc-600 overflow-hidden relative bg-black">
         {videoMeta ? (
           <>
             {/* Layer 0: Video */}
             <VideoLayer
               src={videoMeta.src}
-              currentFrame={currentFrame}
-              fps={videoMeta.fps}
+              playbackRate={playbackRate}
               isPlaying={isPlaying}
+              onTimeUpdate={setCurrentTime}
+              onVideoReady={(seek, getTime) => {
+                seekVideo.current = seek;
+                getVideoTime.current = getTime;
+              }}
             />
-            {/* Layer 1: Pose overlay canvas goes here later */}
-            {/* Layer 2: 3D view overlay goes here later */}
+            {/* Layer 1: Pose overlay canvas — future */}
+            {/* Layer 2: 3D sync overlay — future */}
           </>
         ) : (
-          /* Empty state */
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
             <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 rounded-sm border border-zinc-700 flex items-center justify-center">
@@ -162,7 +178,6 @@ export const Viewport = () => {
         )}
       </main>
 
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -178,11 +193,14 @@ export const Viewport = () => {
       >
         <ControlPanel
           currentFrame={currentFrame}
-          setCurrentFrame={setCurrentFrame}
-          totalFrames={videoMeta?.totalFrames ?? 0}
-          fps={videoMeta?.fps ?? 30}
+          totalFrames={totalFrames}
+          fps={fps}
           isPlaying={isPlaying}
           setIsPlaying={setIsPlaying}
+          playbackRate={playbackRate}
+          setPlaybackRate={setPlaybackRate}
+          onSeekToFrame={handleSeekToFrame}
+          getCurrentTime={getCurrentTime}
           disabled={!videoMeta}
         />
       </div>
