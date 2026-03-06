@@ -5,3 +5,4 @@ When the video hits its end, I want the next press of space to restart it. Right
 TODO
 
 - Test with a 60fps video to see if it's actually reading the framerate
+- Will need to refactor the folders to create separation of concerns
