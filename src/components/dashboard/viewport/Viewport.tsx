@@ -62,6 +62,7 @@ export const Viewport = () => {
     y: 0,
   });
   const [videoLoading, setVideoLoading] = useState(false);
+  const [videoProbing, setVideoProbing] = useState(false); // true while ffprobe reads fps
   const exportingRef = useRef(false);
 
   // ── Pose ──────────────────────────────────────────────────────────────────
@@ -228,7 +229,9 @@ export const Viewport = () => {
       tmp.onloadedmetadata = async () => {
         // Read fps from the file via ffprobe (avg_frame_rate fraction).
         // This is the only reliable source — rVFC-based counting is inaccurate.
+        setVideoProbing(true);
         const fps = await probeVideoFps(src);
+        setVideoProbing(false);
 
         setVideoMeta({
           src,
@@ -424,13 +427,13 @@ export const Viewport = () => {
               )}
             </div>
 
-            {/* Loading spinner — shown during seek/buffer, hidden during export */}
-            {videoLoading && exportStatus === 'idle' && (
+            {/* Loading spinner — probing fps or buffering, hidden during export */}
+            {(videoProbing || videoLoading) && exportStatus === 'idle' && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="flex flex-col items-center gap-2">
                   <div className="w-6 h-6 border-2 border-zinc-600 border-t-sky-400 rounded-full animate-spin" />
                   <span className="text-[8px] uppercase tracking-widest text-zinc-500">
-                    Loading
+                    {videoProbing ? 'Analysing…' : 'Loading'}
                   </span>
                 </div>
               </div>

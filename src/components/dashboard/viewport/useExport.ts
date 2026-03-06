@@ -124,12 +124,11 @@ export function useExport({
           '-i',
           'input.mp4',
           ...(vf ? ['-vf', vf] : []),
+          // Stream copy when no crop — near-instant, no re-encode
+          // Re-encode only when cropping (can't stream-copy with -vf)
           '-c:v',
-          'libx264',
-          '-preset',
-          'fast',
-          '-crf',
-          '18',
+          cropRect ? 'libx264' : 'copy',
+          ...(cropRect ? ['-preset', 'ultrafast', '-crf', '18'] : []),
           '-c:a',
           'aac',
           '-b:a',
