@@ -41,7 +41,7 @@ const MAX_SCALE = 8;
 const ZOOM_SPEED = 0.005;
 
 export const Viewport = () => {
-  const sectionHeights = { header: '1.25rem', controlSection: '10rem' };
+  const sectionHeights = { header: '1.25rem', controlSection: '12rem' };
 
   const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -898,7 +898,10 @@ export const Viewport = () => {
           showPosePanel={showPosePanel}
           onTogglePosePanel={() => setShowPosePanel((v) => !v)}
           showTrimCropPanel={showTrimCropPanel}
-          onToggleTrimCropPanel={() => setShowTrimCropPanel((v) => !v)}
+          onToggleTrimCropPanel={() => {
+            setShowTrimCropPanel((v) => !v);
+            resetTransform();
+          }}
           disabled={!videoMeta}
         />
       </div>

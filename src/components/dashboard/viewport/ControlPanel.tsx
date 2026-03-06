@@ -114,7 +114,7 @@ function Readout({ label, value }: { label: string; value: string }) {
       <span className="text-[11px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300">
         {label}
       </span>
-      <span className="text-sm text-sky-600 dark:text-sky-300 tabular-nums leading-none">
+      <span className="text-xs text-sky-600 dark:text-sky-300 tabular-nums leading-none font-mono">
         {value}
       </span>
     </div>
@@ -210,7 +210,7 @@ function TimeRuler({
   if (totalFrames < 2) return null;
 
   return (
-    <div className="px-4 pb-2 pt-1 flex flex-col gap-1.5">
+    <div className="px-4 pb-1 pt-0.5 flex flex-col gap-1">
       {/* Rail */}
       <div
         ref={railRef}
@@ -422,7 +422,7 @@ export function ControlPanel({
         {/* Main controls */}
         <div className="MainControls flex-1 border border-t-0 border-zinc-400 dark:border-zinc-600 flex flex-col overflow-hidden">
           {/* Scrubber */}
-          <div className="ScrubberSection px-4 pt-3 pb-1">
+          <div className="ScrubberSection px-4 pt-2 pb-1">
             <div
               className="relative h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full cursor-pointer group"
               onClick={handleScrub}
@@ -461,7 +461,7 @@ export function ControlPanel({
           />
 
           {/* Timecode readouts */}
-          <div className="ReadoutsRow flex justify-between items-center px-4 pt-2 pb-1">
+          <div className="ReadoutsRow flex justify-between items-center px-4 pt-1 pb-0.5">
             <Readout
               label={startFrame !== null ? 'Rel. Frame' : 'Frame'}
               value={`${relativeFrame !== null ? relativeFrame : currentFrame} / ${totalFrames > 0 ? totalFrames - 1 : 0}`}
