@@ -12,6 +12,7 @@ import {
   Flag,
   Ruler,
   Crosshair,
+  Triangle,
   PanelRight,
   ScanLine,
   Settings2,
@@ -54,8 +55,10 @@ interface ControlPanelProps {
   onClearStartFrame: () => void;
   calibration: CalibrationData | null;
   onStartCalibration: () => void;
-  measuring: boolean;
-  onToggleMeasuring: () => void;
+  measuringDistance: boolean;
+  measuringAngle: boolean;
+  onToggleMeasuringDistance: () => void;
+  onToggleMeasuringAngle: () => void;
   measurementCount: number;
   showMeasurementPanel: boolean;
   onToggleMeasurementPanel: () => void;
@@ -308,8 +311,10 @@ export function ControlPanel({
   onClearStartFrame,
   calibration,
   onStartCalibration,
-  measuring,
-  onToggleMeasuring,
+  measuringDistance,
+  measuringAngle,
+  onToggleMeasuringDistance,
+  onToggleMeasuringAngle,
   measurementCount,
   showMeasurementPanel,
   onToggleMeasurementPanel,
@@ -618,20 +623,36 @@ export function ControlPanel({
               <Ruler size={14} />
             </IconBtn>
 
-            {/* Measure tool — only enabled when calibrated */}
+            {/* Measure distance */}
             <IconBtn
-              onClick={onToggleMeasuring}
+              onClick={onToggleMeasuringDistance}
               tooltip={
                 !calibration
                   ? 'Calibrate first to measure'
-                  : measuring
-                    ? 'Stop measuring'
+                  : measuringDistance
+                    ? 'Stop measuring distance'
                     : 'Measure distance'
               }
-              active={measuring}
+              active={measuringDistance}
               disabled={!calibration}
             >
               <Crosshair size={14} />
+            </IconBtn>
+
+            {/* Measure angle */}
+            <IconBtn
+              onClick={onToggleMeasuringAngle}
+              tooltip={
+                !calibration
+                  ? 'Calibrate first to measure angles'
+                  : measuringAngle
+                    ? 'Stop measuring angle'
+                    : 'Measure angle'
+              }
+              active={measuringAngle}
+              disabled={!calibration}
+            >
+              <Triangle size={14} />
             </IconBtn>
 
             {/* Measurement panel toggle */}

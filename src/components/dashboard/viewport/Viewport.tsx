@@ -53,10 +53,8 @@ export const Viewport = () => {
   const [calibration, setCalibration] = useState<CalibrationData | null>(null);
   const [calibrating, setCalibrating] = useState(false);
   const [calibrationKey, setCalibrationKey] = useState(0);
-  const [measuring, setMeasuring] = useState(false);
-  const [measureMode, setMeasureMode] = useState<'distance' | 'angle'>(
-    'distance',
-  );
+  const [measuringDistance, setMeasuringDistance] = useState(false);
+  const [measuringAngle, setMeasuringAngle] = useState(false);
   const [measuringKey, setMeasuringKey] = useState(0);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [showMeasurementPanel, setShowMeasurementPanel] = useState(false);
@@ -272,13 +270,13 @@ export const Viewport = () => {
   });
 
   const calibratingRef = useRef(calibrating);
-  const measuringRef = useRef(measuring);
+  const measuringRef = useRef(false);
+  useEffect(() => {
+    measuringRef.current = measuringDistance || measuringAngle;
+  }, [measuringDistance, measuringAngle]);
   useEffect(() => {
     calibratingRef.current = calibrating;
   }, [calibrating]);
-  useEffect(() => {
-    measuringRef.current = measuring;
-  }, [measuring]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (
@@ -354,7 +352,8 @@ export const Viewport = () => {
         setStartFrame(null);
         setCalibration(null);
         setCalibrating(false);
-        setMeasuring(false);
+        setMeasuringDistance(false);
+        setMeasuringAngle(false);
         setMeasurements([]);
         setShowMeasurementPanel(false);
         setPoseEnabled(false);
@@ -487,7 +486,7 @@ export const Viewport = () => {
         className="flex-1 border border-zinc-400 dark:border-zinc-600 overflow-hidden relative bg-black select-none"
         style={{
           cursor:
-            calibrating || measuring || drawingCrop
+            calibrating || measuringDistance || measuringAngle || drawingCrop
               ? 'crosshair'
               : transform.scale > 1
                 ? 'grab'
@@ -593,8 +592,8 @@ export const Viewport = () => {
             {calibration && (
               <MeasurementOverlay
                 key={measuringKey}
-                active={measuring}
-                mode={measureMode}
+                active={measuringDistance || measuringAngle}
+                mode={measuringAngle ? 'angle' : 'distance'}
                 transform={transform}
                 calibration={calibration}
                 measurements={measurements}
@@ -606,33 +605,25 @@ export const Viewport = () => {
             )}
 
             {/* Measurement HUD */}
-            {measuring && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+            {(measuringDistance || measuringAngle) && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-950/80 border border-zinc-600 rounded-sm backdrop-blur-sm pointer-events-auto">
-                  <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-                  <span className="text-[11px] uppercase tracking-widest text-zinc-300">
-                    {measureMode === 'distance'
-                      ? 'Click two points to measure distance'
-                      : 'Click: ray A → vertex → ray B'}
-                  </span>
-                  <div className="h-3 w-px bg-zinc-600 mx-1" />
-                  <button
-                    onClick={() =>
-                      setMeasureMode((m) =>
-                        m === 'distance' ? 'angle' : 'distance',
-                      )
-                    }
-                    className={`text-[11px] uppercase tracking-widest transition-colors px-1.5 py-0.5 rounded-sm border ${
-                      measureMode === 'angle'
-                        ? 'border-violet-500 text-violet-400'
-                        : 'border-zinc-600 text-zinc-400 hover:text-zinc-200'
-                    }`}
+                  <div
+                    className={`w-1.5 h-1.5 rounded-full animate-pulse ${measuringAngle ? 'bg-violet-400' : 'bg-sky-400'}`}
+                  />
+                  <span
+                    className={`text-[11px] uppercase tracking-widest ${measuringAngle ? 'text-violet-300' : 'text-zinc-300'}`}
                   >
-                    {measureMode === 'distance' ? '∠ Angle' : '⟷ Distance'}
-                  </button>
+                    {measuringAngle
+                      ? 'Click: ray A → vertex → ray B'
+                      : 'Click two points to measure'}
+                  </span>
                   <button
-                    onClick={() => setMeasuring(false)}
-                    className="ml-1 text-[11px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors"
+                    onClick={() => {
+                      setMeasuringDistance(false);
+                      setMeasuringAngle(false);
+                    }}
+                    className="ml-2 text-[11px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
                     Done
                   </button>
@@ -755,7 +746,8 @@ export const Viewport = () => {
                         setStartFrame(null);
                         setCalibration(null);
                         setCalibrating(false);
-                        setMeasuring(false);
+                        setMeasuringDistance(false);
+                        setMeasuringAngle(false);
                         setMeasurements([]);
                         setShowMeasurementPanel(false);
                         setTrimPoints({ inPoint: 0, outPoint: safeDur });
@@ -815,28 +807,42 @@ export const Viewport = () => {
                       prev.map((m) => ({ ...m, visible: !allVisible })),
                     );
                   }}
+                  onToggleSectionVisible={(type) =>
+                    setMeasurements((prev) => {
+                      const section = prev.filter((m) => m.type === type);
+                      const allVisible = section.every((m) => m.visible);
+                      return prev.map((m) =>
+                        m.type === type ? { ...m, visible: !allVisible } : m,
+                      );
+                    })
+                  }
+                  onDeleteSection={(type) =>
+                    setMeasurements((prev) =>
+                      prev.filter((m) => m.type !== type),
+                    )
+                  }
                   onClose={() => setShowMeasurementPanel(false)}
                 />
               </div>
             )}
           </>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-12 h-12 rounded-sm border border-zinc-700 flex items-center justify-center">
-                <Upload className="h-5 w-5 text-zinc-500" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-6">
+            <div className="flex flex-col items-center gap-5">
+              <div className="w-28 h-28 rounded-sm border border-zinc-500 flex items-center justify-center">
+                <Upload className="h-14 w-14 text-zinc-200" />
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-sans">
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-base uppercase tracking-[0.2em] text-white font-sans">
                   No video loaded
                 </span>
-                <span className="text-[9px] text-zinc-600 font-sans">
+                <span className="text-sm text-zinc-300 font-sans">
                   Upload a video to begin analysis
                 </span>
               </div>
               <button
                 onClick={handleUploadClick}
-                className="mt-1 px-3 py-1.5 rounded-sm border border-zinc-700 text-[9px] uppercase tracking-widest text-zinc-400 hover:border-sky-500 hover:text-sky-400 transition-all duration-150 cursor-pointer font-sans"
+                className="mt-1 px-5 py-2.5 rounded-sm border border-zinc-500 text-sm uppercase tracking-widest text-white hover:border-sky-400 hover:text-sky-400 transition-all duration-150 cursor-pointer font-sans"
               >
                 Upload Video
               </button>
@@ -883,11 +889,19 @@ export const Viewport = () => {
             setCalibrationKey((k) => k + 1);
             setCalibrating(true);
           }}
-          measuring={measuring}
-          onToggleMeasuring={() => {
+          measuringDistance={measuringDistance}
+          measuringAngle={measuringAngle}
+          onToggleMeasuringDistance={() => {
             setIsPlaying(false);
             setMeasuringKey((k) => k + 1);
-            setMeasuring((m) => !m);
+            setMeasuringDistance((m) => !m);
+            setMeasuringAngle(false);
+          }}
+          onToggleMeasuringAngle={() => {
+            setIsPlaying(false);
+            setMeasuringKey((k) => k + 1);
+            setMeasuringAngle((m) => !m);
+            setMeasuringDistance(false);
           }}
           measurementCount={measurements.length}
           showMeasurementPanel={showMeasurementPanel}
