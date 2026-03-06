@@ -17,6 +17,7 @@ import { TrimCropPanel } from './TrimCropPanel';
 import { CropOverlay } from './CropOverlay';
 import { useExport } from './useExport';
 import { probeVideoFps } from './probeVideoFps';
+import { useStatus } from './StatusContext';
 import type { CropRect, TrimPoints } from './TrimCropPanel';
 
 interface VideoMeta {
@@ -62,6 +63,7 @@ export const Viewport = () => {
     y: 0,
   });
   const [videoLoading, setVideoLoading] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
   const [videoProbing, setVideoProbing] = useState(false); // true while ffprobe reads fps
   const exportingRef = useRef(false);
 
@@ -123,6 +125,105 @@ export const Viewport = () => {
     if (!poseEnabled || poseStatus !== 'ready' || !videoElRef.current) return;
     detect(videoElRef.current, currentTime * 1000);
   }, [currentTime, poseEnabled, poseStatus, detect]);
+
+  // ── Status bar reporting ──────────────────────────────────────────────────
+  const { set: setStatus, clear: clearStatus } = useStatus();
+
+  // Video file info
+  useEffect(() => {
+    if (!videoMeta) {
+      clearStatus('video');
+      clearStatus('fps');
+      clearStatus('frame');
+      return;
+    }
+    setStatus('video', 'file', videoMeta.title, { accent: 'sky' });
+    setStatus(
+      'fps',
+      'fps',
+      `${videoMeta.fps % 1 === 0 ? videoMeta.fps : videoMeta.fps.toFixed(3)}`,
+    );
+  }, [videoMeta, setStatus, clearStatus]);
+
+  // Playback position
+  useEffect(() => {
+    if (!videoMeta) return;
+    const tc = `${String(Math.floor(currentTime / 60)).padStart(2, '0')}:${(currentTime % 60).toFixed(2).padStart(5, '0')}`;
+    setStatus('frame', 'frame', `${currentFrame} / ${totalFrames}  ${tc}`);
+  }, [currentFrame, currentTime, totalFrames, videoMeta, setStatus]);
+
+  // Playback state
+  useEffect(() => {
+    if (!videoMeta) {
+      clearStatus('playback');
+      return;
+    }
+    if (videoEnded)
+      setStatus('playback', 'state', 'ended', { accent: 'amber' });
+    else if (isPlaying)
+      setStatus('playback', 'state', 'playing', {
+        accent: 'emerald',
+        pulse: true,
+      });
+    else setStatus('playback', 'state', 'paused', { accent: 'default' });
+  }, [isPlaying, videoEnded, videoMeta, setStatus, clearStatus]);
+
+  // Probing
+  useEffect(() => {
+    if (videoProbing)
+      setStatus('probe', 'analysing', 'fps…', { accent: 'amber', pulse: true });
+    else clearStatus('probe');
+  }, [videoProbing, setStatus, clearStatus]);
+
+  // Export
+  useEffect(() => {
+    if (exportStatus === 'idle') clearStatus('export');
+    else if (exportStatus === 'loading')
+      setStatus('export', 'export', 'loading ffmpeg…', {
+        accent: 'amber',
+        pulse: true,
+      });
+    else if (exportStatus === 'running')
+      setStatus(
+        'export',
+        'export',
+        `encoding ${Math.round(exportProgress * 100)}%`,
+        { accent: 'sky', pulse: true },
+      );
+    else if (exportStatus === 'done') {
+      setStatus('export', 'export', 'complete', { accent: 'emerald' });
+      const t = setTimeout(() => clearStatus('export'), 3000);
+      return () => clearTimeout(t);
+    } else if (exportStatus === 'error') {
+      setStatus('export', 'export', 'error', { accent: 'red' });
+      const t = setTimeout(() => clearStatus('export'), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [exportStatus, exportProgress, setStatus, clearStatus]);
+
+  // Pose
+  useEffect(() => {
+    if (poseEnabled)
+      setStatus(
+        'pose',
+        'pose',
+        poseStatus === 'ready' ? 'active' : 'loading…',
+        {
+          accent: poseStatus === 'ready' ? 'emerald' : 'amber',
+          pulse: poseStatus !== 'ready',
+        },
+      );
+    else clearStatus('pose');
+  }, [poseEnabled, poseStatus, setStatus, clearStatus]);
+
+  // Zoom
+  useEffect(() => {
+    if (transform.scale > 1)
+      setStatus('zoom', 'zoom', `${transform.scale.toFixed(1)}×`, {
+        accent: 'sky',
+      });
+    else clearStatus('zoom');
+  }, [transform.scale, setStatus, clearStatus]);
 
   const clampPan = useCallback(
     (x: number, y: number, scale: number, el: HTMLElement) => {
@@ -272,6 +373,7 @@ export const Viewport = () => {
       const time = frame / fps;
       seekVideo.current(time);
       setCurrentTime(time);
+      setVideoEnded(false);
     },
     [fps],
   );
@@ -319,61 +421,47 @@ export const Viewport = () => {
     <div className="viewport-container flex flex-col h-full">
       <header
         style={{ height: sectionHeights.header }}
-        className="flex items-center shrink-0 border border-t-0 border-zinc-400 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 gap-3"
+        className="flex items-center shrink-0 border border-t-0 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 gap-3"
       >
+        {/* Section label */}
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-          <span className="text-[9px] uppercase tracking-[0.2em] text-zinc-700 dark:text-zinc-300 font-sans">
+          <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 font-sans">
             Viewport
           </span>
         </div>
-        <div className="h-4 w-px bg-zinc-400 dark:bg-zinc-600" />
+
+        <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800" />
+
+        {/* Metadata readouts */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <FilePlayIcon className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
-            <span className="text-[9px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300 font-sans">
-              {videoMeta ? videoMeta.title : 'No Video'}
+            <FilePlayIcon className="h-3 w-3 text-zinc-400 dark:text-zinc-500" />
+            <span className="text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-sans">
+              Title
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <IconDimensions className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
-            <span className="text-[9px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300 font-sans">
-              {videoMeta ? `${videoMeta.width}×${videoMeta.height}` : '—'}
+            <IconDimensions className="h-3 w-3 text-zinc-400 dark:text-zinc-500" />
+            <span className="text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-sans">
+              Dimensions
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Clock className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
-            <span className="text-[9px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300 font-sans">
-              {videoMeta ? `${videoMeta.fps} fps` : '—'}
+            <Clock className="h-3 w-3 text-zinc-400 dark:text-zinc-500" />
+            <span className="text-[11px] uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-sans">
+              Framerate
             </span>
           </div>
-          {zoomLabel && (
-            <button
-              onClick={resetTransform}
-              className="text-[9px] uppercase tracking-widest text-sky-500 hover:text-sky-400 border border-sky-600/40 px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer"
-            >
-              {zoomLabel} ✕
-            </button>
-          )}
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          {videoMeta && (
-            <button
-              onClick={handleUploadClick}
-              className="flex items-center gap-1.5 text-[9px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-            >
-              <Upload className="h-3 w-3" />
-              <span className="font-sans">Replace</span>
-            </button>
-          )}
-          <div className="flex gap-1">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="w-1 h-1 rounded-full bg-zinc-400 dark:bg-zinc-600"
-              />
-            ))}
-          </div>
+
+        <div className="ml-auto flex gap-1">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"
+            />
+          ))}
         </div>
       </header>
 
@@ -414,6 +502,10 @@ export const Viewport = () => {
                 onVideoReady={handleVideoReady}
                 onLoadingChange={(loading) => {
                   if (!exportingRef.current) setVideoLoading(loading);
+                }}
+                onEnded={() => {
+                  setIsPlaying(false);
+                  setVideoEnded(true);
                 }}
               />
               {/* Pose overlay lives inside transform wrapper — stays registered to video */}
@@ -731,7 +823,11 @@ export const Viewport = () => {
           totalFrames={totalFrames}
           fps={fps}
           isPlaying={isPlaying}
-          setIsPlaying={setIsPlaying}
+          setIsPlaying={(v) => {
+            setIsPlaying(v);
+            setVideoEnded(false);
+          }}
+          videoEnded={videoEnded}
           playbackRate={playbackRate}
           setPlaybackRate={setPlaybackRate}
           volume={volume}

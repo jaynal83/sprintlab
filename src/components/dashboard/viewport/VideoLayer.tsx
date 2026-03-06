@@ -13,6 +13,7 @@ interface VideoLayerProps {
     videoEl: HTMLVideoElement,
   ) => void;
   onLoadingChange: (loading: boolean) => void;
+  onEnded: () => void;
 }
 
 export const VideoLayer = ({
@@ -24,6 +25,7 @@ export const VideoLayer = ({
   onTimeUpdate,
   onVideoReady,
   onLoadingChange,
+  onEnded,
 }: VideoLayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -79,7 +81,15 @@ export const VideoLayer = ({
     video.muted = isMuted;
   }, [volume, isMuted]);
 
-  // Loading state — fires on seeking and buffering
+  // Ended — fires when video reaches its natural end
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.addEventListener('ended', onEnded);
+    return () => video.removeEventListener('ended', onEnded);
+  }, [onEnded]);
+
+  // Loading state
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;

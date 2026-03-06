@@ -153,7 +153,7 @@ export const TrimCropPanel = ({
         {/* Header */}
         <div className="h-5 shrink-0 border-b border-zinc-400 dark:border-zinc-600 flex items-center px-3 gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          <span className="text-[9px] uppercase tracking-[0.2em] whitespace-nowrap">
+          <span className="text-[11px] uppercase tracking-[0.2em] whitespace-nowrap">
             Trim & Crop
           </span>
           <div className="ml-auto">
@@ -176,13 +176,13 @@ export const TrimCropPanel = ({
           <div className="border-b border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center gap-2 px-3 py-1 bg-zinc-50 dark:bg-zinc-900">
               <Scissors size={9} className="text-emerald-400 shrink-0" />
-              <span className="text-[9px] uppercase tracking-widest text-emerald-400 flex-1">
+              <span className="text-[11px] uppercase tracking-widest text-emerald-400 flex-1">
                 Trim
               </span>
               {(trimPoints.inPoint > 0 || trimPoints.outPoint < duration) && (
                 <button
                   onClick={onClearTrim}
-                  className="text-[8px] uppercase tracking-widest text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                  className="text-[10px] uppercase tracking-widest text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
                 >
                   Reset
                 </button>
@@ -249,7 +249,7 @@ export const TrimCropPanel = ({
                 ] as const
               ).map(({ label, time, onSet }) => (
                 <div key={label} className="flex items-center gap-2">
-                  <span className="text-[9px] uppercase tracking-widest text-zinc-500 w-6">
+                  <span className="text-[11px] uppercase tracking-widest text-zinc-500 w-6">
                     {label}
                   </span>
                   <span className="text-xs tabular-nums font-mono flex-1 text-sky-500 dark:text-sky-300">
@@ -259,7 +259,7 @@ export const TrimCropPanel = ({
                     <TooltipTrigger asChild>
                       <button
                         onClick={onSet}
-                        className="text-[8px] uppercase tracking-widest px-1.5 py-0.5 border border-zinc-400 dark:border-zinc-600 text-zinc-500 hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-pointer rounded-sm"
+                        className="text-[10px] uppercase tracking-widest px-1.5 py-0.5 border border-zinc-400 dark:border-zinc-600 text-zinc-500 hover:border-emerald-500 hover:text-emerald-400 transition-colors cursor-pointer rounded-sm"
                       >
                         Set
                       </button>
@@ -273,13 +273,13 @@ export const TrimCropPanel = ({
 
               {/* Duration */}
               <div className="flex items-center gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-800">
-                <span className="text-[9px] uppercase tracking-widest text-zinc-500 w-6">
+                <span className="text-[11px] uppercase tracking-widest text-zinc-500 w-6">
                   Dur
                 </span>
                 <span className="text-xs tabular-nums font-mono text-zinc-500">
                   {fmt(trimDuration)}
                 </span>
-                <span className="text-[8px] text-zinc-500 ml-auto">
+                <span className="text-[10px] text-zinc-500 ml-auto">
                   {Math.round(trimDuration * fps)} frames
                 </span>
               </div>
@@ -290,13 +290,13 @@ export const TrimCropPanel = ({
           <div className="border-b border-zinc-200 dark:border-zinc-800">
             <div className="flex items-center gap-2 px-3 py-1 bg-zinc-50 dark:bg-zinc-900">
               <Crop size={9} className="text-sky-400 shrink-0" />
-              <span className="text-[9px] uppercase tracking-widest text-sky-400 flex-1">
+              <span className="text-[11px] uppercase tracking-widest text-sky-400 flex-1">
                 Crop
               </span>
               {cropRect && (
                 <button
                   onClick={onClearCrop}
-                  className="text-[8px] uppercase tracking-widest text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                  className="text-[10px] uppercase tracking-widest text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
                 >
                   Clear
                 </button>
@@ -318,7 +318,7 @@ export const TrimCropPanel = ({
                     { label: 'H', val: `${cropH}px` },
                   ].map(({ label, val }) => (
                     <div key={label} className="flex items-center gap-2">
-                      <span className="text-[9px] uppercase tracking-widest text-zinc-500 w-4">
+                      <span className="text-[11px] uppercase tracking-widest text-zinc-500 w-4">
                         {label}
                       </span>
                       <span className="text-xs tabular-nums font-mono text-sky-500 dark:text-sky-300">
@@ -326,12 +326,12 @@ export const TrimCropPanel = ({
                       </span>
                     </div>
                   ))}
-                  <div className="text-[8px] text-zinc-500">
+                  <div className="text-[10px] text-zinc-500">
                     Output: {cropW} × {cropH}px
                   </div>
                   <button
                     onClick={onStartCropDraw}
-                    className="text-[8px] uppercase tracking-widest px-2 py-1 border border-zinc-400 dark:border-zinc-600 text-zinc-500 hover:border-sky-500 hover:text-sky-400 transition-colors cursor-pointer rounded-sm text-center"
+                    className="text-[10px] uppercase tracking-widest px-2 py-1 border border-zinc-400 dark:border-zinc-600 text-zinc-500 hover:border-sky-500 hover:text-sky-400 transition-colors cursor-pointer rounded-sm text-center"
                   >
                     Redraw
                   </button>
@@ -340,11 +340,11 @@ export const TrimCropPanel = ({
                 <>
                   <button
                     onClick={onStartCropDraw}
-                    className="text-[8px] uppercase tracking-widest px-2 py-1.5 border border-zinc-400 dark:border-zinc-600 text-zinc-500 hover:border-sky-500 hover:text-sky-400 transition-colors cursor-pointer rounded-sm text-center"
+                    className="text-[10px] uppercase tracking-widest px-2 py-1.5 border border-zinc-400 dark:border-zinc-600 text-zinc-500 hover:border-sky-500 hover:text-sky-400 transition-colors cursor-pointer rounded-sm text-center"
                   >
                     Draw crop region
                   </button>
-                  <p className="text-[8px] text-zinc-500 leading-relaxed">
+                  <p className="text-[10px] text-zinc-500 leading-relaxed">
                     No crop — full frame
                   </p>
                 </>
@@ -355,7 +355,7 @@ export const TrimCropPanel = ({
           {/* ── Export ───────────────────────────────────────── */}
           <div className="px-3 py-3 flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-[9px] uppercase tracking-widest text-zinc-500">
+              <span className="text-[11px] uppercase tracking-widest text-zinc-500">
                 Output
               </span>
               <button
@@ -364,7 +364,7 @@ export const TrimCropPanel = ({
                     m === 'download' ? 'replace' : 'download',
                   )
                 }
-                className="ml-auto flex items-center gap-1.5 text-[9px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                className="ml-auto flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
               >
                 {exportMode === 'download' ? (
                   <>
@@ -391,7 +391,7 @@ export const TrimCropPanel = ({
                     style={{ width: `${exportProgress * 100}%` }}
                   />
                 </div>
-                <span className="text-[8px] text-zinc-500 tabular-nums">
+                <span className="text-[10px] text-zinc-500 tabular-nums">
                   {exportStatus === 'loading'
                     ? 'Loading ffmpeg…'
                     : `Encoding… ${Math.round(exportProgress * 100)}%`}
@@ -401,14 +401,14 @@ export const TrimCropPanel = ({
 
             {exportStatus === 'done' && (
               <div className="flex flex-col gap-2">
-                <span className="text-[8px] text-emerald-400 uppercase tracking-widest">
+                <span className="text-[10px] text-emerald-400 uppercase tracking-widest">
                   Done
                 </span>
                 {lastExportUrl && exportMode === 'replace' && (
                   <a
                     href={lastExportUrl}
                     download={`${lastExportTitle ?? 'clip'}_clip.webm`}
-                    className="w-full py-1.5 text-[9px] uppercase tracking-widest border border-zinc-600 text-zinc-400 hover:border-sky-500 hover:text-sky-400 transition-colors cursor-pointer rounded-sm text-center block"
+                    className="w-full py-1.5 text-[11px] uppercase tracking-widest border border-zinc-600 text-zinc-400 hover:border-sky-500 hover:text-sky-400 transition-colors cursor-pointer rounded-sm text-center block"
                   >
                     Download copy
                   </a>
@@ -416,7 +416,7 @@ export const TrimCropPanel = ({
               </div>
             )}
             {exportStatus === 'error' && (
-              <span className="text-[8px] text-red-400 uppercase tracking-widest">
+              <span className="text-[10px] text-red-400 uppercase tracking-widest">
                 Export failed
               </span>
             )}
@@ -424,13 +424,13 @@ export const TrimCropPanel = ({
             <button
               onClick={() => onExport(exportMode)}
               disabled={!canExport}
-              className="w-full py-1.5 text-[9px] uppercase tracking-widest border border-emerald-600 text-emerald-400 hover:bg-emerald-600/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer rounded-sm"
+              className="w-full py-1.5 text-[11px] uppercase tracking-widest border border-emerald-600 text-emerald-400 hover:bg-emerald-600/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer rounded-sm"
             >
               {isExporting ? 'Exporting…' : 'Export clip'}
             </button>
 
             {!canExport && !isExporting && (
-              <p className="text-[8px] text-zinc-500 leading-relaxed">
+              <p className="text-[10px] text-zinc-500 leading-relaxed">
                 Set trim in and out points to export
               </p>
             )}

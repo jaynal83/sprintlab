@@ -41,6 +41,7 @@ interface ControlPanelProps {
   fps: number;
   isPlaying: boolean;
   setIsPlaying: (v: boolean | ((p: boolean) => boolean)) => void;
+  videoEnded: boolean;
   playbackRate: number;
   setPlaybackRate: (v: number) => void;
   volume: number;
@@ -95,7 +96,7 @@ function IconBtn({
                 ? 'opacity-25 cursor-not-allowed border-transparent'
                 : active
                   ? 'bg-sky-600/20 border-sky-500/60 text-sky-500 cursor-pointer'
-                  : 'border-zinc-400  text-zinc-700 dark:text-zinc-300 hover:border-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:border-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer'
+                  : 'border-zinc-400 text-zinc-700 dark:text-zinc-300 hover:border-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:hover:border-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 cursor-pointer'
             }
           `}
         >
@@ -110,10 +111,10 @@ function IconBtn({
 function Readout({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="text-[9px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300">
+      <span className="text-[11px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300">
         {label}
       </span>
-      <span className="text-xs text-sky-600 dark:text-sky-300 tabular-nums leading-none">
+      <span className="text-sm text-sky-600 dark:text-sky-300 tabular-nums leading-none">
         {value}
       </span>
     </div>
@@ -126,6 +127,7 @@ export function ControlPanel({
   fps,
   isPlaying,
   setIsPlaying,
+  videoEnded,
   playbackRate,
   setPlaybackRate,
   volume,
@@ -155,6 +157,10 @@ export function ControlPanel({
   const effectiveFps = (fps || 30) * (playbackRate || 1);
   const frameDuration = 1 / (fps || 30);
   const decimalPlaces = Math.max(1, Math.ceil(-Math.log10(frameDuration)));
+  const fpsDisplay = disabled ? '—' : `${effectiveFps}`;
+  const deltaDisplay = disabled
+    ? '—'
+    : `${frameDuration.toFixed(decimalPlaces)}s`;
   const frameToTimecode = (frame: number) => {
     const f = Math.max(0, frame);
     const totalSecs = f / (fps || 30);
@@ -196,11 +202,25 @@ export function ControlPanel({
       if (['ArrowRight', 'ArrowLeft', ' '].includes(e.key)) e.preventDefault();
       if (e.key === 'ArrowRight') stepForward();
       if (e.key === 'ArrowLeft') stepBack();
-      if (e.key === ' ') setIsPlaying((p) => !p);
+      if (e.key === ' ') {
+        if (videoEnded) {
+          onSeekToFrame(0);
+          setIsPlaying(true);
+        } else {
+          setIsPlaying((p) => !p);
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stepForward, stepBack, setIsPlaying, disabled]);
+  }, [
+    stepForward,
+    stepBack,
+    setIsPlaying,
+    disabled,
+    videoEnded,
+    onSeekToFrame,
+  ]);
 
   const progress =
     totalFrames > 1 ? (currentFrame / (totalFrames - 1)) * 100 : 0;
@@ -223,7 +243,7 @@ export function ControlPanel({
         {/* Top label bar */}
         <div className="TopBar h-5 shrink-0 border border-b-0 border-zinc-400 dark:border-zinc-600 flex items-center px-3 gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-          <span className="text-[9px] uppercase tracking-[0.2em] text-zinc-700 dark:text-zinc-300">
+          <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-700 dark:text-zinc-300">
             Playback Control
           </span>
           <div className="ml-auto flex gap-1">
@@ -283,11 +303,8 @@ export function ControlPanel({
               label="Duration"
               value={totalFrames > 1 ? frameToTimecode(totalFrames - 1) : '—'}
             />
-            <Readout label="FPS" value={`${effectiveFps}`} />
-            <Readout
-              label="∆/frame"
-              value={`${frameDuration.toFixed(decimalPlaces)}s`}
-            />
+            <Readout label="FPS" value={fpsDisplay} />
+            <Readout label="∆/frame" value={deltaDisplay} />
           </div>
 
           {/* Divider */}
@@ -310,7 +327,14 @@ export function ControlPanel({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setIsPlaying((p) => !p)}
+                  onClick={() => {
+                    if (videoEnded) {
+                      onSeekToFrame(0);
+                      setIsPlaying(true);
+                    } else {
+                      setIsPlaying((p) => !p);
+                    }
+                  }}
                   className={`
                     flex items-center justify-center w-9 h-9 rounded-sm
                     border transition-all duration-150 cursor-pointer
@@ -470,7 +494,7 @@ export function ControlPanel({
               active={poseEnabled}
             >
               {poseStatus === 'loading' ? (
-                <span className="text-[8px] animate-pulse">…</span>
+                <span className="text-[10px] animate-pulse">…</span>
               ) : (
                 <ScanLine size={14} />
               )}
@@ -506,10 +530,10 @@ export function ControlPanel({
                 ['Space', 'play'],
               ].map(([key, label]) => (
                 <div key={key} className="flex items-center gap-1">
-                  <span className="text-[9px] px-1 py-0.5 bg-zinc-100 border border-zinc-400 dark:bg-zinc-950 dark:border-zinc-600 rounded-sm text-zinc-700 dark:text-zinc-300 leading-none">
+                  <span className="text-[11px] px-1 py-0.5 bg-zinc-100 border border-zinc-400 dark:bg-zinc-950 dark:border-zinc-600 rounded-sm text-zinc-700 dark:text-zinc-300 leading-none">
                     {key}
                   </span>
-                  <span className="text-[9px] text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">
+                  <span className="text-[11px] text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">
                     {label}
                   </span>
                 </div>
