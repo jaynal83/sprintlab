@@ -29,7 +29,10 @@ export const MeasurementPanel = ({
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="flex flex-col h-full bg-white dark:bg-zinc-950">
+      <div
+        className="flex flex-col h-full bg-white dark:bg-zinc-950"
+        onWheel={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="h-5 shrink-0 border-b border-zinc-400 dark:border-zinc-600 flex items-center px-3 gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
@@ -105,21 +108,31 @@ export const MeasurementPanel = ({
                   key={m.id}
                   className={`flex items-center px-3 py-1.5 gap-2 group hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors ${!m.visible ? 'opacity-40' : ''}`}
                 >
-                  {/* Index */}
-                  <span className="text-[9px] tabular-nums text-zinc-400 dark:text-zinc-600 w-4 shrink-0">
+                  {/* Index + type indicator */}
+                  <span className="text-[10px] tabular-nums text-zinc-400 dark:text-zinc-600 w-4 shrink-0">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-
-                  {/* Distance */}
-                  <span className="text-xs text-sky-600 dark:text-sky-300 tabular-nums font-mono flex-1">
-                    {m.meters.toFixed(3)}
-                    <span className="text-[9px] text-zinc-500 ml-1">m</span>
+                  <span
+                    className={`text-[9px] uppercase shrink-0 ${m.type === 'angle' ? 'text-violet-400' : 'text-sky-500'}`}
+                  >
+                    {m.type === 'angle' ? '∠' : '⟷'}
                   </span>
 
-                  {/* cm */}
-                  <span className="text-[9px] tabular-nums text-zinc-500 shrink-0">
-                    {(m.meters * 100).toFixed(1)}cm
-                  </span>
+                  {/* Value */}
+                  {m.type === 'distance' && m.meters !== undefined ? (
+                    <span className="text-xs text-sky-600 dark:text-sky-300 tabular-nums font-mono flex-1">
+                      {m.meters.toFixed(3)}
+                      <span className="text-[9px] text-zinc-500 ml-1">m</span>
+                      <span className="text-[9px] text-zinc-500 ml-2">
+                        {(m.meters * 100).toFixed(1)}cm
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-violet-400 tabular-nums font-mono flex-1">
+                      {m.degrees?.toFixed(1)}
+                      <span className="text-[9px] text-zinc-500 ml-1">°</span>
+                    </span>
+                  )}
 
                   {/* Per-row visibility toggle */}
                   <button

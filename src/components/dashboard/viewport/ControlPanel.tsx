@@ -156,20 +156,15 @@ export function ControlPanel({
 }: ControlPanelProps) {
   const effectiveFps = (fps || 30) * (playbackRate || 1);
   const frameDuration = 1 / (fps || 30);
-  const decimalPlaces = Math.max(1, Math.ceil(-Math.log10(frameDuration)));
   const fpsDisplay = disabled ? '—' : `${effectiveFps}`;
-  const deltaDisplay = disabled
-    ? '—'
-    : `${frameDuration.toFixed(decimalPlaces)}s`;
+  const deltaDisplay = disabled ? '—' : `${frameDuration.toFixed(4)}s`;
   const frameToTimecode = (frame: number) => {
     const f = Math.max(0, frame);
     const totalSecs = f / (fps || 30);
     const mins = Math.floor(totalSecs / 60)
       .toString()
       .padStart(2, '0');
-    const secs = (totalSecs % 60)
-      .toFixed(decimalPlaces)
-      .padStart(3 + decimalPlaces, '0');
+    const secs = (totalSecs % 60).toFixed(4).padStart(7, '0');
     return `${mins}:${secs}`;
   };
   const relativeFrame = startFrame !== null ? currentFrame - startFrame : null;

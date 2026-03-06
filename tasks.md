@@ -2,7 +2,6 @@
 
 TODO
 
-- The metadata stuff in the viewport header aren't being change from the placeholder when the video is uploaded. Add the zoom level back to the header too
 - Zooming in before doing the the trimming and cropping messes everything up. Patch?
 - Seems like horizontal measurements don't scale to vertical. Check. Will probably need to scale based on the video width and height? A shorter distance vertically will equal a longer distance horizontally?
 - Add measurement of angles.

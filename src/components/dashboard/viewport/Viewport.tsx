@@ -54,6 +54,9 @@ export const Viewport = () => {
   const [calibrating, setCalibrating] = useState(false);
   const [calibrationKey, setCalibrationKey] = useState(0);
   const [measuring, setMeasuring] = useState(false);
+  const [measureMode, setMeasureMode] = useState<'distance' | 'angle'>(
+    'distance',
+  );
   const [measuringKey, setMeasuringKey] = useState(0);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [showMeasurementPanel, setShowMeasurementPanel] = useState(false);
@@ -421,47 +424,61 @@ export const Viewport = () => {
     <div className="viewport-container flex flex-col h-full">
       <header
         style={{ height: sectionHeights.header }}
-        className="flex items-center shrink-0 border border-t-0 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 gap-3"
+        className="flex items-center shrink-0 border border-t-0 border-zinc-400 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 gap-3"
       >
-        {/* Section label */}
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
           <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-700 dark:text-zinc-300 font-sans">
             Viewport
           </span>
         </div>
-
-        <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800" />
-
-        {/* Metadata readouts */}
+        <div className="h-4 w-px bg-zinc-400 dark:bg-zinc-600" />
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <FilePlayIcon className="h-3 w-3 text-zinc-700 dark:text-zinc-300" />
+            <FilePlayIcon className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
             <span className="text-[11px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300 font-sans">
-              Title
+              {videoMeta ? videoMeta.title : 'No Video'}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <IconDimensions className="h-3 w-3 text-zinc-700 dark:text-zinc-300" />
+            <IconDimensions className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
             <span className="text-[11px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300 font-sans">
-              Dimensions
+              {videoMeta ? `${videoMeta.width}×${videoMeta.height}` : '—'}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Clock className="h-3 w-3 text-zinc-700 dark:text-zinc-300" />
+            <Clock className="h-3 w-3 text-zinc-500 dark:text-zinc-400" />
             <span className="text-[11px] uppercase tracking-widest text-zinc-700 dark:text-zinc-300 font-sans">
-              Framerate
+              {videoMeta ? `${videoMeta.fps} fps` : '—'}
             </span>
           </div>
+          {zoomLabel && (
+            <button
+              onClick={resetTransform}
+              className="text-[11px] uppercase tracking-widest text-sky-500 hover:text-sky-400 border border-sky-600/40 px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer"
+            >
+              {zoomLabel} ✕
+            </button>
+          )}
         </div>
-
-        <div className="ml-auto flex gap-1">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"
-            />
-          ))}
+        <div className="ml-auto flex items-center gap-3">
+          {videoMeta && (
+            <button
+              onClick={handleUploadClick}
+              className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+            >
+              <Upload className="h-3 w-3" />
+              <span className="font-sans">Replace</span>
+            </button>
+          )}
+          <div className="flex gap-1">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="w-1 h-1 rounded-full bg-zinc-400 dark:bg-zinc-600"
+              />
+            ))}
+          </div>
         </div>
       </header>
 
@@ -550,6 +567,8 @@ export const Viewport = () => {
               key={calibrationKey}
               active={calibrating}
               transform={transform}
+              videoWidth={videoMeta.width}
+              videoHeight={videoMeta.height}
               existingCalibration={calibration}
               onCalibrationComplete={(data: CalibrationData) => {
                 setCalibration(data);
@@ -562,6 +581,8 @@ export const Viewport = () => {
               <CalibrationOverlay
                 active={false}
                 transform={transform}
+                videoWidth={videoMeta.width}
+                videoHeight={videoMeta.height}
                 existingCalibration={calibration}
                 onCalibrationComplete={() => {}}
                 onCancel={() => {}}
@@ -573,6 +594,7 @@ export const Viewport = () => {
               <MeasurementOverlay
                 key={measuringKey}
                 active={measuring}
+                mode={measureMode}
                 transform={transform}
                 calibration={calibration}
                 measurements={measurements}
@@ -588,12 +610,29 @@ export const Viewport = () => {
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-950/80 border border-zinc-600 rounded-sm backdrop-blur-sm pointer-events-auto">
                   <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-                  <span className="text-[9px] uppercase tracking-widest text-zinc-300">
-                    Click two points to measure
+                  <span className="text-[11px] uppercase tracking-widest text-zinc-300">
+                    {measureMode === 'distance'
+                      ? 'Click two points to measure distance'
+                      : 'Click: ray A → vertex → ray B'}
                   </span>
+                  <div className="h-3 w-px bg-zinc-600 mx-1" />
+                  <button
+                    onClick={() =>
+                      setMeasureMode((m) =>
+                        m === 'distance' ? 'angle' : 'distance',
+                      )
+                    }
+                    className={`text-[11px] uppercase tracking-widest transition-colors px-1.5 py-0.5 rounded-sm border ${
+                      measureMode === 'angle'
+                        ? 'border-violet-500 text-violet-400'
+                        : 'border-zinc-600 text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    {measureMode === 'distance' ? '∠ Angle' : '⟷ Distance'}
+                  </button>
                   <button
                     onClick={() => setMeasuring(false)}
-                    className="ml-2 text-[9px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors"
+                    className="ml-1 text-[11px] uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
                     Done
                   </button>
@@ -785,19 +824,19 @@ export const Viewport = () => {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
             <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 rounded-sm border border-zinc-700 flex items-center justify-center">
-                <Upload className="h-5 w-5 text-zinc-300" />
+                <Upload className="h-5 w-5 text-zinc-500" />
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[0.8rem] uppercase tracking-[0.2em] text-zinc-300 font-sans">
+                <span className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-sans">
                   No video loaded
                 </span>
-                <span className="text-[0.8rem] text-zinc-300 font-sans">
+                <span className="text-[9px] text-zinc-600 font-sans">
                   Upload a video to begin analysis
                 </span>
               </div>
               <button
                 onClick={handleUploadClick}
-                className="mt-1 px-3 py-1.5 rounded-sm border border-zinc-700 text-[0.8rem] uppercase tracking-widest text-zinc-300 hover:border-sky-500 hover:text-sky-400 transition-all duration-150 cursor-pointer font-sans"
+                className="mt-1 px-3 py-1.5 rounded-sm border border-zinc-700 text-[9px] uppercase tracking-widest text-zinc-400 hover:border-sky-500 hover:text-sky-400 transition-all duration-150 cursor-pointer font-sans"
               >
                 Upload Video
               </button>

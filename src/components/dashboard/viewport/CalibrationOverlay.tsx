@@ -5,11 +5,14 @@ export interface CalibrationData {
   lineStart: { x: number; y: number }; // normalized 0-1
   lineEnd: { x: number; y: number };
   realMeters: number;
+  aspectRatio: number; // videoWidth / videoHeight, stored so measurements can use same ratio
 }
 
 interface Props {
   active: boolean;
   transform: { scale: number; x: number; y: number };
+  videoWidth: number;
+  videoHeight: number;
   existingCalibration: CalibrationData | null;
   onCalibrationComplete: (data: CalibrationData) => void;
   onCancel: () => void;
@@ -20,6 +23,8 @@ type Step = 'pick_start' | 'pick_end' | 'enter_distance';
 export const CalibrationOverlay = ({
   active,
   transform,
+  videoWidth,
+  videoHeight,
   existingCalibration,
   onCalibrationComplete,
   onCancel,
@@ -179,18 +184,28 @@ export const CalibrationOverlay = ({
     if (!pointA || !pointB) return;
     const meters = parseFloat(distanceInput);
     if (isNaN(meters) || meters <= 0) return;
-    // Pixel distance in normalized space × arbitrary 1000 base
-    const dx = pointB.x - pointA.x;
+    // Scale dx by aspect ratio so horizontal and vertical units are equal
+    const aspect = videoWidth && videoHeight ? videoWidth / videoHeight : 1;
+    const dx = (pointB.x - pointA.x) * aspect;
     const dy = pointB.y - pointA.y;
     const normDist = Math.sqrt(dx * dx + dy * dy);
     const pixelsPerMeter = normDist / meters;
+    const aspectRatio = aspect;
     onCalibrationComplete({
       pixelsPerMeter,
       lineStart: pointA,
       lineEnd: pointB,
       realMeters: meters,
+      aspectRatio,
     });
-  }, [pointA, pointB, distanceInput, onCalibrationComplete]);
+  }, [
+    pointA,
+    pointB,
+    distanceInput,
+    videoWidth,
+    videoHeight,
+    onCalibrationComplete,
+  ]);
 
   const handleReset = () => {
     setPointA(null);

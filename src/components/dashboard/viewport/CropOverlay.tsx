@@ -60,13 +60,18 @@ export const CropOverlay = ({
 
   // ── Coord helpers ───────────────────────────────────────────────────────
   // All normalised coords are 0-1 WITHIN the video frame (not the canvas).
+  // IMPORTANT: use offsetWidth/offsetHeight (natural layout size, pre-transform)
+  // not getBoundingClientRect (which returns post-transform scaled size).
 
   const getContain = useCallback((): ReturnType<typeof containRect> => {
     const el = canvasRef.current;
     if (!el) return { left: 0, top: 0, width: 1, height: 1 };
-    // Use getBoundingClientRect width/height so we get the actual CSS size
-    const { width: cw, height: ch } = el.getBoundingClientRect();
-    return containRect(cw, ch, videoWidth, videoHeight);
+    return containRect(
+      el.offsetWidth,
+      el.offsetHeight,
+      videoWidth,
+      videoHeight,
+    );
   }, [videoWidth, videoHeight]);
 
   // screen px (relative to viewport) → normalised video coord 0-1
@@ -75,20 +80,22 @@ export const CropOverlay = ({
       const el = canvasRef.current;
       if (!el) return { x: 0, y: 0 };
 
-      // Position relative to canvas top-left
+      // Screen position of the canvas element (post-transform, used for origin only)
       const rect = el.getBoundingClientRect();
-      const sx = clientX - rect.left;
-      const sy = clientY - rect.top;
-      const cw = rect.width;
-      const ch = rect.height;
 
-      // Undo viewport zoom/pan (transform is applied around canvas centre)
-      const cx = cw / 2,
-        cy = ch / 2;
-      const ux = (sx - cx - transform.x) / transform.scale + cx;
-      const uy = (sy - cy - transform.y) / transform.scale + cy;
+      // Natural (pre-transform) canvas dimensions
+      const cw = el.offsetWidth;
+      const ch = el.offsetHeight;
 
-      // Undo letterboxing
+      // Convert screen coords to pre-transform canvas space by undoing CSS scale+translate.
+      // getBoundingClientRect gives the scaled rect; we find the canvas center in screen space,
+      // subtract to get offset from center, divide by scale to get pre-transform offset.
+      const screenCx = rect.left + rect.width / 2;
+      const screenCy = rect.top + rect.height / 2;
+      const ux = (clientX - screenCx) / transform.scale + cw / 2;
+      const uy = (clientY - screenCy) / transform.scale + ch / 2;
+
+      // Undo letterboxing using natural canvas size
       const c = containRect(cw, ch, videoWidth, videoHeight);
       return {
         x: Math.max(0, Math.min(1, (ux - c.left) / c.width)),
@@ -98,27 +105,20 @@ export const CropOverlay = ({
     [transform, videoWidth, videoHeight],
   );
 
-  // normalised video coord → screen px (relative to canvas top-left)
+  // normalised video coord → canvas px (in natural/pre-transform space)
   const normToCanvas = useCallback(
     (nx: number, ny: number): { x: number; y: number } => {
       const el = canvasRef.current;
       if (!el) return { x: 0, y: 0 };
-      const { width: cw, height: ch } = el.getBoundingClientRect();
+      const cw = el.offsetWidth;
+      const ch = el.offsetHeight;
       const c = containRect(cw, ch, videoWidth, videoHeight);
-
-      // Point in canvas-space before transform
-      const px = c.left + nx * c.width;
-      const py = c.top + ny * c.height;
-
-      // Apply viewport zoom/pan around canvas centre
-      const cx = cw / 2,
-        cy = ch / 2;
       return {
-        x: (px - cx) * transform.scale + cx + transform.x,
-        y: (py - cy) * transform.scale + cy + transform.y,
+        x: c.left + nx * c.width,
+        y: c.top + ny * c.height,
       };
     },
-    [transform, videoWidth, videoHeight],
+    [videoWidth, videoHeight],
   );
 
   // ── Hit testing ─────────────────────────────────────────────────────────
@@ -277,9 +277,17 @@ export const CropOverlay = ({
   };
 
   // ── Pointer events ──────────────────────────────────────────────────────
+  // localXY converts screen coords to pre-transform canvas space (same space
+  // as normToCanvas output), so hitHandle comparisons work correctly when zoomed.
   const localXY = (e: React.PointerEvent) => {
-    const r = canvasRef.current!.getBoundingClientRect();
-    return { lx: e.clientX - r.left, ly: e.clientY - r.top };
+    const el = canvasRef.current!;
+    const rect = el.getBoundingClientRect();
+    const screenCx = rect.left + rect.width / 2;
+    const screenCy = rect.top + rect.height / 2;
+    return {
+      lx: (e.clientX - screenCx) / transform.scale + el.offsetWidth / 2,
+      ly: (e.clientY - screenCy) / transform.scale + el.offsetHeight / 2,
+    };
   };
 
   const onPointerDown = useCallback(
