@@ -3,6 +3,7 @@
 TODO
 
 - The metadata stuff in the viewport header aren't being change from the placeholder when the video is uploaded. Add the zoom level back to the header too
+- Zooming in before doing the the trimming and cropping messes everything up. Patch?
 - Seems like horizontal measurements don't scale to vertical. Check.
 - Add measurement of angles.
 - I downloaded a video that's 60fps and its still saying 30fps. Turns out the FFMpeg code always defaults to 30. Fix that.
