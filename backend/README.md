@@ -52,6 +52,9 @@ Keypoints are returned as compact flat arrays `[x, y, score, x, y, score, ...]` 
 
 ## Installation
 
+Shortcut for me in development:
+cd backend & python -m venv venv & venv\Scripts\activate & pip install -r requirements.txt & cls & uvicorn server:app --port 8080 --reload
+
 ### 1. Create a virtual environment
 
 ```bash

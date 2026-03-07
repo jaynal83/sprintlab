@@ -45,6 +45,7 @@ export const Viewport = () => {
 
   const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  const [presentedFrames, setPresentedFrames] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
@@ -107,13 +108,16 @@ export const Viewport = () => {
 
   const fps = videoMeta?.fps ?? 30;
   const totalFrames = videoMeta?.totalFrames ?? 0;
-  // Round rather than floor to stay in sync with OpenCV's frame index
-  // (OpenCV uses round(time * fps) internally for CAP_PROP_POS_FRAMES)
   const currentFrame = Math.min(Math.round(currentTime * fps), totalFrames - 1);
-  // When pose is ready use backend's exact count to avoid ±1 mismatch
+  // Use browser's exact decoded frame index (from requestVideoFrameCallback) for
+  // pose lookup — eliminates the time*fps drift that causes skeleton/video mismatch.
+  // Falls back to time-based calc if rvfc isn't supported.
   const poseFrame =
     poseTotalFrames > 0
-      ? Math.min(Math.round(currentTime * fps), poseTotalFrames - 1)
+      ? Math.min(
+          presentedFrames ?? Math.round(currentTime * fps),
+          poseTotalFrames - 1,
+        )
       : currentFrame;
 
   const {
@@ -398,6 +402,7 @@ export const Viewport = () => {
       const time = frame / fps;
       seekVideo.current(time);
       setCurrentTime(time);
+      setPresentedFrames(frame); // snap pose frame immediately on seek
       setVideoEnded(false);
     },
     [fps],
@@ -533,11 +538,15 @@ export const Viewport = () => {
             >
               <VideoLayer
                 src={videoMeta.src}
+                fps={fps}
                 playbackRate={playbackRate}
                 isPlaying={isPlaying}
                 volume={volume}
                 isMuted={isMuted}
-                onTimeUpdate={setCurrentTime}
+                onTimeUpdate={(time, frames) => {
+                  setCurrentTime(time);
+                  if (frames !== undefined) setPresentedFrames(frames);
+                }}
                 onVideoReady={handleVideoReady}
                 onLoadingChange={(loading) => {
                   if (!exportingRef.current) setVideoLoading(loading);
