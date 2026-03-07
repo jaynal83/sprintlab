@@ -1,6 +1,3 @@
-// ─── RTMPose Backend Hook ─────────────────────────────────────────────────────
-// Uploads video as multipart, reads SSE stream for progress then final result.
-
 import { useRef, useState, useCallback } from 'react';
 
 interface ImportMetaEnv {
@@ -15,7 +12,6 @@ export interface Keypoint {
   y: number;
   score: number;
 }
-
 export type LandmarkerStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 interface UsePoseLandmarkerReturn {
@@ -23,6 +19,7 @@ interface UsePoseLandmarkerReturn {
   progress: { frame: number; total: number; pct: number } | null;
   frameWidth: number;
   frameHeight: number;
+  totalFrames: number; // ← ground truth frame count from backend
   getKeypoints: (frame: number) => Keypoint[];
   analyseVideo: (videoSrc: string) => Promise<void>;
   reset: () => void;
@@ -37,10 +34,13 @@ export function usePoseLandmarker(): UsePoseLandmarkerReturn {
   } | null>(null);
   const [frameWidth, setFrameWidth] = useState(0);
   const [frameHeight, setFrameHeight] = useState(0);
+  const [totalFrames, setTotalFrames] = useState(0);
   const frameMapRef = useRef<Map<number, Keypoint[]>>(new Map());
 
   const getKeypoints = useCallback((frame: number): Keypoint[] => {
-    return frameMapRef.current.get(frame) ?? [];
+    // Clamp to valid range so last frame never overflows
+    const clamped = Math.max(0, Math.min(frame, frameMapRef.current.size - 1));
+    return frameMapRef.current.get(clamped) ?? [];
   }, []);
 
   const reset = useCallback(() => {
@@ -49,13 +49,13 @@ export function usePoseLandmarker(): UsePoseLandmarkerReturn {
     setProgress(null);
     setFrameWidth(0);
     setFrameHeight(0);
+    setTotalFrames(0);
   }, []);
 
   const analyseVideo = useCallback(
     async (videoSrc: string) => {
       reset();
       setStatus('loading');
-
       try {
         const blob = await fetch(videoSrc).then((r) => r.blob());
         const form = new FormData();
@@ -65,7 +65,6 @@ export function usePoseLandmarker(): UsePoseLandmarkerReturn {
           method: 'POST',
           body: form,
         });
-
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         if (!res.body) throw new Error('No response body');
 
@@ -76,10 +75,9 @@ export function usePoseLandmarker(): UsePoseLandmarkerReturn {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop() ?? ''; // keep incomplete line
+          buffer = lines.pop() ?? '';
 
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
@@ -89,16 +87,16 @@ export function usePoseLandmarker(): UsePoseLandmarkerReturn {
               setProgress({ frame: msg.frame, total: msg.total, pct: msg.pct });
             } else if (msg.type === 'result') {
               const map = new Map<number, Keypoint[]>();
-              (msg.frames as number[][]).forEach((flat, frameIdx) => {
+              (msg.frames as number[][]).forEach((flat, i) => {
                 const kps: Keypoint[] = [];
-                for (let i = 0; i < flat.length; i += 3) {
-                  kps.push({ x: flat[i], y: flat[i + 1], score: flat[i + 2] });
-                }
-                map.set(frameIdx, kps);
+                for (let j = 0; j < flat.length; j += 3)
+                  kps.push({ x: flat[j], y: flat[j + 1], score: flat[j + 2] });
+                map.set(i, kps);
               });
               frameMapRef.current = map;
               setFrameWidth(msg.frame_width);
               setFrameHeight(msg.frame_height);
+              setTotalFrames(msg.total_frames); // use backend's count, not duration*fps
               setProgress(null);
               setStatus('ready');
             }
@@ -118,6 +116,7 @@ export function usePoseLandmarker(): UsePoseLandmarkerReturn {
     progress,
     frameWidth,
     frameHeight,
+    totalFrames,
     getKeypoints,
     analyseVideo,
     reset,

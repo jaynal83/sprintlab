@@ -81,6 +81,7 @@ export const Viewport = () => {
     progress: poseProgress,
     frameWidth: poseFrameW,
     frameHeight: poseFrameH,
+    totalFrames: poseTotalFrames,
     getKeypoints,
     analyseVideo,
     reset: resetPose,
@@ -106,7 +107,14 @@ export const Viewport = () => {
 
   const fps = videoMeta?.fps ?? 30;
   const totalFrames = videoMeta?.totalFrames ?? 0;
-  const currentFrame = Math.floor(currentTime * fps);
+  // Round rather than floor to stay in sync with OpenCV's frame index
+  // (OpenCV uses round(time * fps) internally for CAP_PROP_POS_FRAMES)
+  const currentFrame = Math.min(Math.round(currentTime * fps), totalFrames - 1);
+  // When pose is ready use backend's exact count to avoid ±1 mismatch
+  const poseFrame =
+    poseTotalFrames > 0
+      ? Math.min(Math.round(currentTime * fps), poseTotalFrames - 1)
+      : currentFrame;
 
   const {
     exportStatus,
@@ -542,7 +550,7 @@ export const Viewport = () => {
               {/* Pose overlay lives inside transform wrapper — stays registered to video */}
               {poseEnabled && poseStatus === 'ready' && (
                 <PoseOverlay
-                  keypoints={getKeypoints(currentFrame)}
+                  keypoints={getKeypoints(poseFrame)}
                   frameWidth={poseFrameW}
                   frameHeight={poseFrameH}
                   videoNatWidth={videoMeta.width}
