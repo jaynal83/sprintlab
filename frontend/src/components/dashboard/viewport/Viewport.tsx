@@ -85,6 +85,7 @@ export const Viewport = () => {
     totalFrames: poseTotalFrames,
     poseFps,
     getKeypoints,
+    getKeypoints3D,
     analyseVideo,
     reset: resetPose,
   } = usePoseLandmarker();
@@ -410,6 +411,8 @@ export const Viewport = () => {
     });
   }, []);
 
+  // getKeypoints3D & mode3D are wired — used when 3D view is built
+  void getKeypoints3D;
   const zoomLabel =
     transform.scale > 1 ? `${transform.scale.toFixed(1)}×` : null;
 

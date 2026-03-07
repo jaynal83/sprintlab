@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import tempfile, os
 
-from rtmlib import BodyWithFeet
+from rtmlib import PoseTracker, Wholebody3d
 
 app = FastAPI()
 
@@ -19,16 +19,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialise model once at startup
-body_with_feet = BodyWithFeet(
-    to_openpose=False,
+# Initialise tracker once at startup
+tracker = PoseTracker(
+    Wholebody3d,
+    det_frequency=7,
+    tracking=False,
     backend="onnxruntime",
     device="cpu",
 )
 
 # Warmup
-body_with_feet(np.zeros((64, 64, 3), dtype=np.uint8))
-print("✅ Model ready")
+blank = np.zeros((64, 64, 3), dtype=np.uint8)
+tracker(blank)
+print("✅ Wholebody3d ready")
 
 
 @app.get("/health")
@@ -38,7 +41,6 @@ def health():
 
 @app.post("/infer/video")
 async def infer_video(file: UploadFile = File(...)):
-    # Save upload to a temp file so OpenCV can open it
     suffix = os.path.splitext(file.filename or "video.mp4")[1] or ".mp4"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
@@ -56,10 +58,10 @@ async def infer_video(file: UploadFile = File(...)):
             if fps <= 0:
                 fps = 30.0
 
-            frames_data  = []
-            frame_idx    = 0
-            start_time   = time.time()
-            fps_window   = deque(maxlen=30)
+            frames_data = []
+            frame_idx   = 0
+            start_time  = time.time()
+            fps_window  = deque(maxlen=30)
 
             while cap.isOpened():
                 success, frame = cap.read()
@@ -68,22 +70,36 @@ async def infer_video(file: UploadFile = File(...)):
 
                 frame_start = time.time()
 
-                keypoints, scores = body_with_feet(frame)
+                # Wholebody3d returns: keypoints_3d, scores, keypoints_simcc, keypoints_2d
+                keypoints_3d, scores, _simcc, keypoints_2d = tracker(frame)
 
-                # Compact flat array: [x0,y0,s0, x1,y1,s1, ...]
-                if len(keypoints) > 0:
-                    kp = keypoints[0]
-                    sc = scores[0]
-                    flat = []
-                    for (x, y), s in zip(kp, sc):
-                        flat.extend([float(x), float(y), float(s)])
+                # Wire format per frame:
+                # 2D section: [x0,y0,s0,  x1,y1,s1,  ...] for all N keypoints
+                # 3D section: [x0,y0,z0,  x1,y1,z1,  ...] for all N keypoints
+                # Packed as a single flat list: 2D first, then 3D.
+                # Frontend splits at index N*3 to recover both.
+                if len(keypoints_2d) > 0 and len(keypoints_3d) > 0:
+                    kp2 = keypoints_2d[0]   # (N, 2)
+                    kp3 = keypoints_3d[0]   # (N, 3)
+                    sc  = scores[0]         # (N,)
+
+                    flat2d = []
+                    for (x, y), s in zip(kp2, sc):
+                        flat2d.extend([float(x), float(y), float(s)])
+
+                    flat3d = []
+                    for (x, y, z) in kp3:
+                        flat3d.extend([float(x), float(y), float(z)])
+
+                    flat = flat2d + flat3d
+                    n_kpts = len(sc)
                 else:
-                    # No detection — zeros
-                    flat = [0.0] * (26 * 3)
+                    # No detection — zeros. Will be filled client-side.
+                    n_kpts = 133          # Wholebody3d keypoint count
+                    flat   = [0.0] * (n_kpts * 3 + n_kpts * 3)
 
                 frames_data.append(flat)
 
-                # Timing
                 frame_time = time.time() - frame_start
                 fps_window.append(frame_time)
                 elapsed = time.time() - start_time
@@ -94,30 +110,13 @@ async def infer_video(file: UploadFile = File(...)):
                 eta            = remaining / real_fps if real_fps > 0 else 0
                 pct            = round((frame_idx + 1) / total_frames * 100, 1) if total_frames > 0 else 0
 
-                progress_event = {
-                    "type":    "progress",
-                    "frame":   frame_idx,
-                    "total":   total_frames - 1,  # 0-based last index
-                    "pct":     pct,
-                    "fps":     round(real_fps, 2),
-                    "elapsed": round(elapsed, 1),
-                    "eta":     round(eta, 1),
-                }
-                yield f"data: {json.dumps(progress_event)}\n\n"
+                yield f"data: {json.dumps({'type': 'progress', 'frame': frame_idx, 'total': total_frames - 1, 'pct': pct, 'fps': round(real_fps, 2), 'elapsed': round(elapsed, 1), 'eta': round(eta, 1)})}\n\n"
 
                 frame_idx += 1
 
             cap.release()
 
-            result_event = {
-                "type":         "result",
-                "fps":          fps,          # exact CAP_PROP_FPS — ground truth
-                "frame_width":  width,
-                "frame_height": height,
-                "total_frames": len(frames_data),
-                "frames":       frames_data,
-            }
-            yield f"data: {json.dumps(result_event)}\n\n"
+            yield f"data: {json.dumps({'type': 'result', 'fps': fps, 'frame_width': width, 'frame_height': height, 'total_frames': len(frames_data), 'n_kpts': n_kpts, 'frames': frames_data})}\n\n"
 
         finally:
             os.unlink(tmp_path)
