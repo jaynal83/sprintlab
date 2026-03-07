@@ -4,7 +4,7 @@ from rtmlib import BodyWithFeet, draw_skeleton
 device = "cpu"
 backend = "onnxruntime"
 
-cap = cv2.VideoCapture("./videos/hadid.mp4")
+cap = cv2.VideoCapture("./videos/ants.mp4")
 
 openpose_skeleton = False
 
@@ -24,7 +24,9 @@ if fps <= 0:
 fourcc = cv2.VideoWriter_fourcc(*"MJPG")
 out = cv2.VideoWriter("./output/output.avi", fourcc, fps, (width, height))
 
+
 print('Processing...')
+print('FPS:', fps)
 while cap.isOpened():
     success, frame = cap.read()
     if not success:
