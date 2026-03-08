@@ -91,23 +91,23 @@ function pt(keypoints: Keypoint[], idx: number): P2 | null {
   return { x: p.x, y: p.y };
 }
 
-/** Interior angle at vertex B in the triangle A-B-C, degrees [0, 180]. */
-function angleDeg(a: P2, b: P2, c: P2): number {
-  const ax = a.x - b.x,
-    ay = a.y - b.y;
-  const cx = c.x - b.x,
-    cy = c.y - b.y;
+/** Interior angle at vertex B in the triangle A-B-C, degrees [0, 180].
+ *  ar/fw/fh correct for aspect ratio so the angle is in physical space:
+ *  horizontal pixel distance is scaled by ar/fw, vertical by 1/fh. */
+function angleDeg(a: P2, b: P2, c: P2, ar: number, fw: number, fh: number): number {
+  const ax = (a.x - b.x) * ar / fw, ay = (a.y - b.y) / fh;
+  const cx = (c.x - b.x) * ar / fw, cy = (c.y - b.y) / fh;
   const dot = ax * cx + ay * cy;
   const mag = Math.hypot(ax, ay) * Math.hypot(cx, cy);
   if (mag < 1e-6) return 0;
   return (Math.acos(Math.max(-1, Math.min(1, dot / mag))) * 180) / Math.PI;
 }
 
-/** Angle of segment p1→p2 measured from the downward vertical, in degrees.
- *  Positive = leaning forward (to the right of vertical in a left-to-right run). */
-function segAngleDeg(p1: P2, p2: P2): number {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y; // y increases downward
+/** Angle of segment p1→p2 from the downward vertical (+y = down screen), degrees.
+ *  Positive = right of vertical. ar/fw/fh apply calibration aspect-ratio. */
+function segAngleDeg(p1: P2, p2: P2, ar: number, fw: number, fh: number): number {
+  const dx = (p2.x - p1.x) * ar / fw;
+  const dy = (p2.y - p1.y) / fh;
   return (Math.atan2(dx, dy) * 180) / Math.PI;
 }
 
@@ -342,24 +342,33 @@ export function useSprintMetrics(
     );
 
     // ── Angular helpers ─────────────────────────────────────────────────────
+    // Aspect-ratio params for physical-space angle computation
+    const ar = calibration.aspectRatio;
+    const fw = Math.max(1, frameWidth);
+    const fh = Math.max(1, frameHeight);
+
     const jA = (a: (P2 | null)[], b: (P2 | null)[], c: (P2 | null)[]) =>
       a.map((pa, i) => {
         const pb = b[i],
           pc = c[i];
-        return pa && pb && pc ? angleDeg(pa, pb, pc) : null;
+        return pa && pb && pc ? angleDeg(pa, pb, pc, ar, fw, fh) : null;
       });
 
     const sA = (from: (P2 | null)[], to: (P2 | null)[]) =>
       from.map((p1, i) => {
         const p2 = to[i];
-        return p1 && p2 ? segAngleDeg(p1, p2) : null;
+        return p1 && p2 ? segAngleDeg(p1, p2, ar, fw, fh) : null;
       });
 
-    // Trunk direction: hip-midpoint → nose
+    // Trunk forward lean from upward vertical: 0° = upright, + = forward lean.
+    // Uses -dy because nose is above hip (dy < 0 in screen coords), so we
+    // reference the upward direction to get a sensible 0° for an upright athlete.
     const trunkDir = com.map((c, i) => {
       const n = nose[i];
       if (!c || !n) return null;
-      return segAngleDeg(c, n);
+      const dx = (n.x - c.x) * ar / fw;
+      const dy = (n.y - c.y) / fh; // negative: nose above hip
+      return (Math.atan2(dx, -dy) * 180) / Math.PI;
     });
 
     return {
