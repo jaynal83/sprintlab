@@ -88,20 +88,26 @@ function placeSphere(mesh: THREE.Mesh, p: Vec3, r: number) {
   mesh.visible = true;
 }
 
+// ── Colour palette ────────────────────────────────────────────────────────────
+// Unified mannequin — slate family, darkest at the core, lightest at the head.
+const COL_CORE  = 0x3d5a73; // spine, clavicles, pelvis
+const COL_LIMB  = 0x4e7494; // upper arm, thigh
+const COL_DISTAL = 0x6a96b8; // forearm, shin, foot
+const COL_JOINT = 0x8fbcd4; // all joint spheres (lighter — they pop)
+const COL_HEAD  = 0xc8dce8; // head (lightest)
+const COL_NECK  = 0x4e7494;
+
+const MAT_SEG   = { roughness: 0.72, metalness: 0.0 };
+const MAT_JOINT = { roughness: 0.60, metalness: 0.0 };
+
 // ── Mesh builder ──────────────────────────────────────────────────────────────
 function makeCyl(geo: THREE.BufferGeometry, hex: number) {
-  const m = new THREE.Mesh(
-    geo,
-    new THREE.MeshStandardMaterial({ color: hex, roughness: 0.55, metalness: 0.05 }),
-  );
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: hex, ...MAT_SEG }));
   m.visible = false;
   return m;
 }
 function makeSph(geo: THREE.BufferGeometry, hex: number) {
-  const m = new THREE.Mesh(
-    geo,
-    new THREE.MeshStandardMaterial({ color: hex, roughness: 0.45, metalness: 0.05 }),
-  );
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: hex, ...MAT_JOINT }));
   m.visible = false;
   return m;
 }
@@ -157,49 +163,47 @@ function ProceduralBody({ getKeypoints3D, currentFrame }: Props) {
     const group = groupRef.current;
     if (!group) return;
 
-    const cyl = new THREE.CylinderGeometry(1, 1, 1, 10);
-    const sph = new THREE.SphereGeometry(1, 10, 10);
+    const cyl = new THREE.CylinderGeometry(1, 1, 1, 14);
+    const sph = new THREE.SphereGeometry(1, 14, 10);
     const m   = r.current;
 
-    // Spine (torso) — one central cylinder, wider
-    m.spine  = makeCyl(cyl, 0xf87171); group.add(m.spine);
-    // Clavicles (short shoulder stubs)
-    m.lClav  = makeCyl(cyl, 0xf87171); group.add(m.lClav);
-    m.rClav  = makeCyl(cyl, 0xf87171); group.add(m.rClav);
-    // Pelvis stubs
-    m.lPelv  = makeCyl(cyl, 0xf87171); group.add(m.lPelv);
-    m.rPelv  = makeCyl(cyl, 0xf87171); group.add(m.rPelv);
+    // Core
+    m.spine  = makeCyl(cyl, COL_CORE);   group.add(m.spine);
+    m.lClav  = makeCyl(cyl, COL_CORE);   group.add(m.lClav);
+    m.rClav  = makeCyl(cyl, COL_CORE);   group.add(m.rClav);
+    m.lPelv  = makeCyl(cyl, COL_CORE);   group.add(m.lPelv);
+    m.rPelv  = makeCyl(cyl, COL_CORE);   group.add(m.rPelv);
     // Arms
-    m.lUArm  = makeCyl(cyl, 0x60a5fa); group.add(m.lUArm);
-    m.lFArm  = makeCyl(cyl, 0x93c5fd); group.add(m.lFArm);
-    m.rUArm  = makeCyl(cyl, 0x60a5fa); group.add(m.rUArm);
-    m.rFArm  = makeCyl(cyl, 0x93c5fd); group.add(m.rFArm);
+    m.lUArm  = makeCyl(cyl, COL_LIMB);   group.add(m.lUArm);
+    m.lFArm  = makeCyl(cyl, COL_DISTAL); group.add(m.lFArm);
+    m.rUArm  = makeCyl(cyl, COL_LIMB);   group.add(m.rUArm);
+    m.rFArm  = makeCyl(cyl, COL_DISTAL); group.add(m.rFArm);
     // Legs
-    m.lThigh = makeCyl(cyl, 0x4ade80); group.add(m.lThigh);
-    m.lShin  = makeCyl(cyl, 0x86efac); group.add(m.lShin);
-    m.rThigh = makeCyl(cyl, 0x4ade80); group.add(m.rThigh);
-    m.rShin  = makeCyl(cyl, 0x86efac); group.add(m.rShin);
+    m.lThigh = makeCyl(cyl, COL_LIMB);   group.add(m.lThigh);
+    m.lShin  = makeCyl(cyl, COL_DISTAL); group.add(m.lShin);
+    m.rThigh = makeCyl(cyl, COL_LIMB);   group.add(m.rThigh);
+    m.rShin  = makeCyl(cyl, COL_DISTAL); group.add(m.rShin);
     // Neck + head
-    m.neck   = makeCyl(cyl, 0xfbbf24); group.add(m.neck);
-    m.head   = makeSph(sph, 0xfbbf24); group.add(m.head);
-    // Joint spheres
-    m.jLSh   = makeSph(sph, 0x60a5fa); group.add(m.jLSh);
-    m.jRSh   = makeSph(sph, 0x60a5fa); group.add(m.jRSh);
-    m.jLEl   = makeSph(sph, 0x93c5fd); group.add(m.jLEl);
-    m.jREl   = makeSph(sph, 0x93c5fd); group.add(m.jREl);
-    m.jLWr   = makeSph(sph, 0x93c5fd); group.add(m.jLWr);
-    m.jRWr   = makeSph(sph, 0x93c5fd); group.add(m.jRWr);
-    m.jLHip  = makeSph(sph, 0xf87171); group.add(m.jLHip);
-    m.jRHip  = makeSph(sph, 0xf87171); group.add(m.jRHip);
-    m.jLKn   = makeSph(sph, 0x4ade80); group.add(m.jLKn);
-    m.jRKn   = makeSph(sph, 0x4ade80); group.add(m.jRKn);
-    m.jLAn   = makeSph(sph, 0x86efac); group.add(m.jLAn);
-    m.jRAn   = makeSph(sph, 0x86efac); group.add(m.jRAn);
-    // Feet (ankle → toe tip)
-    m.lFoot  = makeCyl(cyl, 0xa3e635); group.add(m.lFoot);
-    m.rFoot  = makeCyl(cyl, 0xa3e635); group.add(m.rFoot);
-    m.jLToe  = makeSph(sph, 0xa3e635); group.add(m.jLToe);
-    m.jRToe  = makeSph(sph, 0xa3e635); group.add(m.jRToe);
+    m.neck   = makeCyl(cyl, COL_NECK);   group.add(m.neck);
+    m.head   = makeSph(sph, COL_HEAD);   group.add(m.head);
+    // Joint spheres (all same colour — lighter than segments)
+    m.jLSh   = makeSph(sph, COL_JOINT);  group.add(m.jLSh);
+    m.jRSh   = makeSph(sph, COL_JOINT);  group.add(m.jRSh);
+    m.jLEl   = makeSph(sph, COL_JOINT);  group.add(m.jLEl);
+    m.jREl   = makeSph(sph, COL_JOINT);  group.add(m.jREl);
+    m.jLWr   = makeSph(sph, COL_JOINT);  group.add(m.jLWr);
+    m.jRWr   = makeSph(sph, COL_JOINT);  group.add(m.jRWr);
+    m.jLHip  = makeSph(sph, COL_JOINT);  group.add(m.jLHip);
+    m.jRHip  = makeSph(sph, COL_JOINT);  group.add(m.jRHip);
+    m.jLKn   = makeSph(sph, COL_JOINT);  group.add(m.jLKn);
+    m.jRKn   = makeSph(sph, COL_JOINT);  group.add(m.jRKn);
+    m.jLAn   = makeSph(sph, COL_JOINT);  group.add(m.jLAn);
+    m.jRAn   = makeSph(sph, COL_JOINT);  group.add(m.jRAn);
+    // Feet
+    m.lFoot  = makeCyl(cyl, COL_DISTAL); group.add(m.lFoot);
+    m.rFoot  = makeCyl(cyl, COL_DISTAL); group.add(m.rFoot);
+    m.jLToe  = makeSph(sph, COL_JOINT);  group.add(m.jLToe);
+    m.jRToe  = makeSph(sph, COL_JOINT);  group.add(m.jRToe);
 
     return () => { cyl.dispose(); sph.dispose(); group.clear(); };
   }, []);
@@ -277,19 +281,19 @@ function ProceduralBody({ getKeypoints3D, currentFrame }: Props) {
       if (m.head) m.head.visible = false;
     }
 
-    // Joint spheres
-    if (lSh  && m.jLSh)  placeSphere(m.jLSh,  lSh,  0.050);
-    if (rSh  && m.jRSh)  placeSphere(m.jRSh,  rSh,  0.050);
-    if (lEl  && m.jLEl)  placeSphere(m.jLEl,  lEl,  0.038);
-    if (rEl  && m.jREl)  placeSphere(m.jREl,  rEl,  0.038);
-    if (lWr  && m.jLWr)  placeSphere(m.jLWr,  lWr,  0.028);
-    if (rWr  && m.jRWr)  placeSphere(m.jRWr,  rWr,  0.028);
-    if (lHip && m.jLHip) placeSphere(m.jLHip, lHip, 0.050);
-    if (rHip && m.jRHip) placeSphere(m.jRHip, rHip, 0.050);
-    if (lKn  && m.jLKn)  placeSphere(m.jLKn,  lKn,  0.044);
-    if (rKn  && m.jRKn)  placeSphere(m.jRKn,  rKn,  0.044);
-    if (lAn  && m.jLAn)  placeSphere(m.jLAn,  lAn,  0.034);
-    if (rAn  && m.jRAn)  placeSphere(m.jRAn,  rAn,  0.034);
+    // Joint spheres — radius matches the wider of the two adjacent segments
+    if (lSh  && m.jLSh)  placeSphere(m.jLSh,  lSh,  0.042); // = uArm r
+    if (rSh  && m.jRSh)  placeSphere(m.jRSh,  rSh,  0.042);
+    if (lEl  && m.jLEl)  placeSphere(m.jLEl,  lEl,  0.042); // = uArm r (wider side)
+    if (rEl  && m.jREl)  placeSphere(m.jREl,  rEl,  0.042);
+    if (lWr  && m.jLWr)  placeSphere(m.jLWr,  lWr,  0.030); // = fArm r
+    if (rWr  && m.jRWr)  placeSphere(m.jRWr,  rWr,  0.030);
+    if (lHip && m.jLHip) placeSphere(m.jLHip, lHip, 0.058); // = thigh r
+    if (rHip && m.jRHip) placeSphere(m.jRHip, rHip, 0.058);
+    if (lKn  && m.jLKn)  placeSphere(m.jLKn,  lKn,  0.058); // = thigh r (wider)
+    if (rKn  && m.jRKn)  placeSphere(m.jRKn,  rKn,  0.058);
+    if (lAn  && m.jLAn)  placeSphere(m.jLAn,  lAn,  0.044); // = shin r
+    if (rAn  && m.jRAn)  placeSphere(m.jRAn,  rAn,  0.044);
     // Feet
     if (m.lFoot && lAn && lToe) orientCylinder(m.lFoot, lAn, lToe, 0.028);
     else if (m.lFoot) m.lFoot.visible = false;
@@ -340,9 +344,10 @@ export function Renderer3D({ getKeypoints3D, currentFrame }: Props) {
         gl={{ antialias: true }}
         style={{ background: '#09090b' }}
       >
-        <ambientLight intensity={0.55} />
-        <directionalLight position={[3, 6, 4]} intensity={0.9} />
-        <directionalLight position={[-3, 2, -2]} intensity={0.25} />
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[3, 6, 4]} intensity={1.1} castShadow />
+        <directionalLight position={[-3, 2, -2]} intensity={0.3} />
+        <directionalLight position={[0, -2, -4]} intensity={0.5} color="#8fbcd4" />{/* rim */}
 
         <ProceduralBody getKeypoints3D={getKeypoints3D} currentFrame={currentFrame} />
 
