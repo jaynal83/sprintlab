@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { FilePlayIcon, Clock, Upload, Layers, Box, Pencil, Eye, EyeOff } from 'lucide-react';
+import { FilePlayIcon, Clock, Upload, Layers, Box, Pencil, Eye, EyeOff, Zap, Activity } from 'lucide-react';
 import { IconDimensions } from '@tabler/icons-react';
 import { VideoLayer } from './VideoLayer';
 import { ControlPanel } from './ControlPanel';
@@ -797,12 +797,10 @@ export const Viewport = () => {
           <div className="flex items-center px-3 h-5 gap-2">
             {/* View mode */}
             <div className="flex items-center border border-zinc-300 dark:border-zinc-700 rounded-sm overflow-hidden">
-              {(['video', 'skeleton', 'body'] as const).map((mode) => (
+              {(['video', 'skeleton', 'body', 'neon', 'grad', 'analytics', 'bio'] as const).map((mode) => (
                 <button
                   key={mode}
-                  onClick={() => {
-                    setViewMode(mode);
-                  }}
+                  onClick={() => { setViewMode(mode); }}
                   className={`flex items-center gap-1 px-1.5 h-4.5 text-[9px] uppercase tracking-widest transition-colors cursor-pointer border-r border-zinc-300 dark:border-zinc-700 last:border-r-0
                     ${
                       viewMode === mode
@@ -810,11 +808,10 @@ export const Viewport = () => {
                         : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
                     }`}
                 >
-                  {mode === 'video' ? (
-                    <Layers className="w-2 h-2" />
-                  ) : (
-                    <Box className="w-2 h-2" />
-                  )}
+                  {mode === 'video' ? <Layers className="w-2 h-2" />
+                    : mode === 'neon' ? <Zap className="w-2 h-2" />
+                    : mode === 'analytics' || mode === 'bio' ? <Activity className="w-2 h-2" />
+                    : <Box className="w-2 h-2" />}
                   <span>{mode}</span>
                 </button>
               ))}
@@ -899,7 +896,7 @@ export const Viewport = () => {
       >
         {videoMeta ? (
           <>
-            {viewMode !== 'video' && (
+            {viewMode !== 'video' && viewMode !== 'analytics' && (
               <div className="absolute inset-0 bg-zinc-950" />
             )}
             <div
@@ -917,7 +914,7 @@ export const Viewport = () => {
                 currentFrame={currentFrame}
                 playbackRate={playbackRate}
                 isPlaying={isPlaying}
-                skeletonOnly={viewMode !== 'video'}
+                skeletonOnly={viewMode !== 'video' && viewMode !== 'analytics'}
                 onFrameChange={setCurrentFrame}
                 onEnded={() => {
                   setIsPlaying(false);

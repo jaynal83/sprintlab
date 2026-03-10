@@ -5,7 +5,7 @@ import type { GroundContactEvent } from '../../useSprintMetrics';
 import type { CoMEvent } from '../../VideoContext';
 import { LANDMARKS, CONNECTIONS, REGION_COLORS } from './poseConfig';
 
-export type ViewMode = 'video' | 'skeleton' | 'body';
+export type ViewMode = 'video' | 'skeleton' | 'body' | 'neon' | 'grad' | 'analytics' | 'bio';
 
 export interface ManualContact {
   id: string;
@@ -185,35 +185,11 @@ export const PoseOverlay = ({
       return !!p && p.score >= SCORE_THRESHOLD;
     };
 
-    if (viewModeRef.current === 'body') {
-      // ── Ralph Mann-style body mode: filled ellipses per segment ────────────
+    const curVM = viewModeRef.current;
+    if (curVM === 'body' || curVM === 'neon' || curVM === 'grad' || curVM === 'analytics' || curVM === 'bio') {
+      // ── Body-type modes ─────────────────────────────────────────────────────
       const get = (idx: number) =>
         isVisible(idx) ? toCanvas(kp[idx]) : null;
-
-      // Filled ellipse along segment pa→pb with half-width hw.
-      const seg = (
-        pa: { x: number; y: number } | null,
-        pb: { x: number; y: number } | null,
-        hw: number,
-        fill: string,
-      ) => {
-        if (!pa || !pb) return;
-        const dx = pb.x - pa.x;
-        const dy = pb.y - pa.y;
-        const len = Math.hypot(dx, dy);
-        if (len < 2) return;
-        ctx.save();
-        ctx.translate((pa.x + pb.x) / 2, (pa.y + pb.y) / 2);
-        ctx.rotate(Math.atan2(dy, dx));
-        ctx.beginPath();
-        ctx.ellipse(0, 0, len / 2 + hw * 0.35, hw, 0, 0, Math.PI * 2);
-        ctx.fillStyle = fill;
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.restore();
-      };
 
       const lSho = get(5),  rSho = get(6);
       const lElb = get(7),  rElb = get(8);
@@ -232,53 +208,212 @@ export const PoseOverlay = ({
         ? { x: (lHip.x + rHip.x) / 2, y: (lHip.y + rHip.y) / 2 }
         : null;
 
-      // Fully opaque colors — 3D model look. Blue body, teal left leg, cyan right leg.
-      const bC = '#3b82f6';   // body — electric blue
-      const lC = '#10b981';   // left leg — emerald green
-      const rC = '#06b6d4';   // right leg — cyan
+      type Pt = { x: number; y: number } | null;
 
-      // Right limbs first (visually "behind")
-      seg(rHip, rKne,   8, rC);
-      seg(rKne, rAnk,   6, rC);
-      seg(rHeel, rToe,  3, rC);
-      // Right arm (body color)
-      seg(rSho, rElb,   6, bC);
-      seg(rElb, rWri,   5, bC);
+      if (curVM === 'analytics') {
+        // ── Analytics: CONNECTIONS-based, drawn over video, Kinovea-style ────
+        const leftIdx  = new Set([5,7,9,11,13,15,17,19,23,25,27,29,31]);
+        const rightIdx = new Set([6,8,10,12,14,16,20,22,24,26,28,30,32]);
+        for (const [a, b] of CONNECTIONS) {
+          if (!isVisible(a) || !isVisible(b)) continue;
+          const pa = toCanvas(kp[a]);
+          const pb = toCanvas(kp[b]);
+          const isL = leftIdx.has(a) && leftIdx.has(b);
+          const isR = rightIdx.has(a) && rightIdx.has(b);
+          ctx.beginPath();
+          ctx.moveTo(pa.x, pa.y);
+          ctx.lineTo(pb.x, pb.y);
+          ctx.strokeStyle = isL ? '#3b82f6' : isR ? '#ef4444' : 'rgba(255,255,255,0.85)';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+        for (const lmDef of LANDMARKS) {
+          if (!isVisible(lmDef.index)) continue;
+          const { x, y } = toCanvas(kp[lmDef.index]);
+          const isL = leftIdx.has(lmDef.index);
+          const isR = rightIdx.has(lmDef.index);
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fillStyle = isL ? '#3b82f6' : isR ? '#ef4444' : '#ffffff';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      } else {
+        // ── Segment-based: body / neon / grad / bio ────────────────────────
+        // Flat filled ellipse segment helper
+        const seg = (pa: Pt, pb: Pt, hw: number, fill: string, strokeCol: string, sw: number) => {
+          if (!pa || !pb) return;
+          const dx = pb.x - pa.x, dy = pb.y - pa.y;
+          const len = Math.hypot(dx, dy);
+          if (len < 2) return;
+          ctx.save();
+          ctx.translate((pa.x + pb.x) / 2, (pa.y + pb.y) / 2);
+          ctx.rotate(Math.atan2(dy, dx));
+          ctx.beginPath();
+          ctx.ellipse(0, 0, len / 2 + hw * 0.35, hw, 0, 0, Math.PI * 2);
+          ctx.fillStyle = fill;
+          ctx.fill();
+          ctx.strokeStyle = strokeCol;
+          ctx.lineWidth = sw;
+          ctx.stroke();
+          ctx.restore();
+        };
 
-      // Torso
-      seg(lSho, rSho,   5, bC);
-      seg(lHip, rHip,   5, bC);
-      seg(shoMid, hipMid, 11, bC);
+        // Neon glow segment — two-pass: outer glow + bright inner core
+        const segNeon = (pa: Pt, pb: Pt, hw: number, color: string) => {
+          if (!pa || !pb) return;
+          const dx = pb.x - pa.x, dy = pb.y - pa.y;
+          const len = Math.hypot(dx, dy);
+          if (len < 2) return;
+          ctx.save();
+          ctx.translate((pa.x + pb.x) / 2, (pa.y + pb.y) / 2);
+          ctx.rotate(Math.atan2(dy, dx));
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 22;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, len / 2 + hw * 0.35, hw, 0, 0, Math.PI * 2);
+          ctx.fillStyle = color + 'bb';
+          ctx.fill();
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, (len / 2 + hw * 0.35) * 0.6, hw * 0.4, 0, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffffaa';
+          ctx.fill();
+          ctx.restore();
+        };
 
-      // Left limbs (visually "in front")
-      seg(lHip, lKne,   8, lC);
-      seg(lKne, lAnk,   6, lC);
-      seg(lHeel, lToe,  3, lC);
-      // Left arm (body color)
-      seg(lSho, lElb,   6, bC);
-      seg(lElb, lWri,   5, bC);
+        // Cylindrical gradient — perpendicular gradient (y-axis in local space after rotation)
+        const segGrad = (pa: Pt, pb: Pt, hw: number, color: string, highlight: string) => {
+          if (!pa || !pb) return;
+          const dx = pb.x - pa.x, dy = pb.y - pa.y;
+          const len = Math.hypot(dx, dy);
+          if (len < 2) return;
+          ctx.save();
+          ctx.translate((pa.x + pb.x) / 2, (pa.y + pb.y) / 2);
+          ctx.rotate(Math.atan2(dy, dx));
+          const grd = ctx.createLinearGradient(0, -hw, 0, hw);
+          grd.addColorStop(0,    color + '55');
+          grd.addColorStop(0.3,  color);
+          grd.addColorStop(0.48, highlight);
+          grd.addColorStop(0.52, highlight);
+          grd.addColorStop(0.7,  color);
+          grd.addColorStop(1,    color + '55');
+          ctx.beginPath();
+          ctx.ellipse(0, 0, len / 2 + hw * 0.35, hw, 0, 0, Math.PI * 2);
+          ctx.fillStyle = grd;
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.restore();
+        };
 
-      // Hands
-      for (const [wri, col] of [[lWri, bC], [rWri, bC]] as const) {
-        if (!wri) continue;
-        ctx.beginPath();
-        ctx.arc(wri.x, wri.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = col;
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
+        if (curVM === 'body') {
+          // ── Body: flat ellipses, blue / green / cyan ─────────────────────
+          const bC = '#3b82f6', lC = '#10b981', rC = '#06b6d4';
+          const S = 'rgba(0,0,0,0.75)', sw = 1.5;
+          seg(rHip, rKne,    8,  rC, S, sw); seg(rKne, rAnk,   6, rC, S, sw);
+          seg(rHeel, rToe,   3,  rC, S, sw); seg(rSho, rElb,   6, bC, S, sw);
+          seg(rElb, rWri,    5,  bC, S, sw); seg(lSho, rSho,   5, bC, S, sw);
+          seg(lHip, rHip,    5,  bC, S, sw); seg(shoMid, hipMid, 11, bC, S, sw);
+          seg(lHip, lKne,    8,  lC, S, sw); seg(lKne, lAnk,   6, lC, S, sw);
+          seg(lHeel, lToe,   3,  lC, S, sw); seg(lSho, lElb,   6, bC, S, sw);
+          seg(lElb, lWri,    5,  bC, S, sw);
+          for (const wri of [lWri, rWri]) {
+            if (!wri) continue;
+            ctx.beginPath(); ctx.arc(wri.x, wri.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = bC; ctx.fill();
+            ctx.strokeStyle = S; ctx.lineWidth = sw; ctx.stroke();
+          }
+          if (nose) {
+            ctx.beginPath(); ctx.arc(nose.x, nose.y, 11, 0, Math.PI * 2);
+            ctx.fillStyle = bC; ctx.fill();
+            ctx.strokeStyle = S; ctx.lineWidth = sw; ctx.stroke();
+          }
 
-      // Head
-      if (nose) {
-        ctx.beginPath();
-        ctx.arc(nose.x, nose.y, 11, 0, Math.PI * 2);
-        ctx.fillStyle = bC;
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        } else if (curVM === 'neon') {
+          // ── Neon glow: electric cyan body / lime left / magenta right ─────
+          const bC = '#00e5ff', lC = '#b2ff00', rC = '#ff00e5';
+          segNeon(rHip, rKne,    8,  rC); segNeon(rKne, rAnk,   6, rC);
+          segNeon(rHeel, rToe,   3,  rC); segNeon(rSho, rElb,   6, bC);
+          segNeon(rElb, rWri,    5,  bC); segNeon(lSho, rSho,   5, bC);
+          segNeon(lHip, rHip,    5,  bC); segNeon(shoMid, hipMid, 11, bC);
+          segNeon(lHip, lKne,    8,  lC); segNeon(lKne, lAnk,   6, lC);
+          segNeon(lHeel, lToe,   3,  lC); segNeon(lSho, lElb,   6, bC);
+          segNeon(lElb, lWri,    5,  bC);
+          for (const wri of [lWri, rWri]) {
+            if (!wri) continue;
+            ctx.save();
+            ctx.shadowColor = bC; ctx.shadowBlur = 18;
+            ctx.beginPath(); ctx.arc(wri.x, wri.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = bC + 'bb'; ctx.fill();
+            ctx.restore();
+          }
+          if (nose) {
+            ctx.save();
+            ctx.shadowColor = bC; ctx.shadowBlur = 22;
+            ctx.beginPath(); ctx.arc(nose.x, nose.y, 11, 0, Math.PI * 2);
+            ctx.fillStyle = bC + 'bb'; ctx.fill();
+            ctx.shadowBlur = 8;
+            ctx.beginPath(); ctx.arc(nose.x, nose.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff88'; ctx.fill();
+            ctx.restore();
+          }
+
+        } else if (curVM === 'grad') {
+          // ── Gradient cylinders: perpendicular gradient for 3D sheen ───────
+          const bC = '#3b82f6', bH = '#93c5fd';
+          const lC = '#10b981', lH = '#6ee7b7';
+          const rC = '#06b6d4', rH = '#67e8f9';
+          segGrad(rHip, rKne,    8,  rC, rH); segGrad(rKne, rAnk,   6, rC, rH);
+          segGrad(rHeel, rToe,   3,  rC, rH); segGrad(rSho, rElb,   6, bC, bH);
+          segGrad(rElb, rWri,    5,  bC, bH); segGrad(lSho, rSho,   5, bC, bH);
+          segGrad(lHip, rHip,    5,  bC, bH); segGrad(shoMid, hipMid, 11, bC, bH);
+          segGrad(lHip, lKne,    8,  lC, lH); segGrad(lKne, lAnk,   6, lC, lH);
+          segGrad(lHeel, lToe,   3,  lC, lH); segGrad(lSho, lElb,   6, bC, bH);
+          segGrad(lElb, lWri,    5,  bC, bH);
+          for (const wri of [lWri, rWri]) {
+            if (!wri) continue;
+            ctx.beginPath(); ctx.arc(wri.x, wri.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = bH; ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1; ctx.stroke();
+          }
+          if (nose) {
+            ctx.save();
+            ctx.translate(nose.x, nose.y);
+            const grd = ctx.createRadialGradient(-4, -4, 1, 0, 0, 11);
+            grd.addColorStop(0, bH); grd.addColorStop(1, bC + '88');
+            ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2);
+            ctx.fillStyle = grd; ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.restore();
+          }
+
+        } else {
+          // ── Bio: bold thick outlines, amber left / sky right / white body ─
+          const bC = '#f1f5f9', lC = '#f59e0b', rC = '#38bdf8';
+          const S = 'rgba(0,0,0,0.85)', sw = 2.5, sc = 1.15;
+          seg(rHip, rKne,    Math.round(8*sc),  rC, S, sw); seg(rKne, rAnk,   Math.round(6*sc), rC, S, sw);
+          seg(rHeel, rToe,   Math.round(3*sc),  rC, S, sw); seg(rSho, rElb,   Math.round(6*sc), bC, S, sw);
+          seg(rElb, rWri,    Math.round(5*sc),  bC, S, sw); seg(lSho, rSho,   Math.round(5*sc), bC, S, sw);
+          seg(lHip, rHip,    Math.round(5*sc),  bC, S, sw); seg(shoMid, hipMid, Math.round(11*sc), bC, S, sw);
+          seg(lHip, lKne,    Math.round(8*sc),  lC, S, sw); seg(lKne, lAnk,   Math.round(6*sc), lC, S, sw);
+          seg(lHeel, lToe,   Math.round(3*sc),  lC, S, sw); seg(lSho, lElb,   Math.round(6*sc), bC, S, sw);
+          seg(lElb, lWri,    Math.round(5*sc),  bC, S, sw);
+          for (const wri of [lWri, rWri]) {
+            if (!wri) continue;
+            ctx.beginPath(); ctx.arc(wri.x, wri.y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = bC; ctx.fill();
+            ctx.strokeStyle = S; ctx.lineWidth = sw; ctx.stroke();
+          }
+          if (nose) {
+            ctx.beginPath(); ctx.arc(nose.x, nose.y, Math.round(11*sc), 0, Math.PI * 2);
+            ctx.fillStyle = bC; ctx.fill();
+            ctx.strokeStyle = S; ctx.lineWidth = sw; ctx.stroke();
+          }
+        }
       }
     } else {
       // ── Standard skeleton mode ──────────────────────────────────────────────
