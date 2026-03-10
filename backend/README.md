@@ -53,7 +53,7 @@ Keypoints are returned as compact flat arrays `[x, y, score, x, y, score, ...]` 
 ## Installation
 
 Shortcut for me in development:
-cd backend & python -m venv venv & venv\Scripts\activate & pip install -r requirements.txt & cls & uvicorn server:app --port 8080 --reload
+cd backend & python -m venv venv & venv\Scripts\activate & pip install -r requirements.txt & cls & uvicorn server:app --port 8000 --reload
 
 ### 1. Create a virtual environment
 
@@ -94,16 +94,16 @@ pip install -r requirements.txt
 ## Running the server
 
 ```bash
-uvicorn server:app --port 8080 --reload
+uvicorn server:app --port 8000 --reload
 ```
 
 - `--reload` watches for file changes (remove in production)
-- Default port is `8080` — set `VITE_POSE_BACKEND_URL=http://localhost:8080` in your frontend `.env` if needed
+- Default port is `8000` — set `VITE_POSE_BACKEND_URL=http://localhost:8000` in your frontend `.env` if needed
 
 Check it's alive:
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8000/health
 # {"status":"ok"}
 ```
 

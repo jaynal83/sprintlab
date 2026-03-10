@@ -5,7 +5,7 @@ interface ImportMetaEnv {
 }
 const BACKEND_URL =
   (import.meta as unknown as { env: ImportMetaEnv }).env
-    ?.VITE_POSE_BACKEND_URL ?? 'http://localhost:8080';
+    ?.VITE_POSE_BACKEND_URL ?? 'http://localhost:8000';
 
 // 2D keypoint — pixel coords in inference frame
 export interface Keypoint {
@@ -55,7 +55,10 @@ export function usePoseLandmarker(): UsePoseLandmarkerReturn {
       while (!cancelled) {
         try {
           const r = await fetch(`${BACKEND_URL}/health`, { method: 'GET' });
-          if (r.ok) { setBackendReachable(true); return; }
+          if (r.ok) {
+            setBackendReachable(true);
+            return;
+          }
         } catch {
           // not yet reachable — keep waiting
         }
@@ -63,7 +66,9 @@ export function usePoseLandmarker(): UsePoseLandmarkerReturn {
       }
     };
     poll();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const map2dRef = useRef<Map<number, Keypoint[]>>(new Map());

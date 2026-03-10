@@ -9,6 +9,7 @@
 - Embed a link to the demo video in the GitHub README.md and on the docs page.
 - Create a separate branch for hosting and host the frontend and backend. Make sure all the settings and modifications are made so they can talk to each other. Can some automated hosting be done so that anytime that branch changes, both the frontend and backend redeploy? That would be cool. I'm thinking Firebase for the frontend and Fly or Render for the backend but open to suggestions. I want to use free tiers and have the frontend and backend running as seamlessly as possible without any interruptions.
 - Add link for frontend to Github repository.
+- Take the codebase for your portfolio website, and turn it into something that reads the information from a database (like something from Firebase) so that we can modify information without having to re-deploy. Then add sprintlab to it.
 
 ## Future Work
 

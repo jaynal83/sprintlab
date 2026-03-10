@@ -23,7 +23,7 @@ SprintLab is split into two independent processes — a React single-page app in
 └────────────────────────────┼────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐
-│  Backend (FastAPI, localhost:8080)                          │
+│  Backend (FastAPI, localhost:8000)                          │
 │                                                             │
 │  GET  /health          readiness probe                      │
 │  POST /infer/video     SSE: progress events + result        │
@@ -42,10 +42,10 @@ The user uploads a video. The frontend reads it as a `Blob` and POSTs it to `POS
 
 Two SSE event types are emitted:
 
-| Event type | When | Payload |
-|---|---|---|
-| `progress` | After each frame | `{ frame, total, pct, fps, elapsed, eta }` |
-| `result` | Once, at the end | `{ fps, frame_width, frame_height, total_frames, n_kpts, frames }` |
+| Event type | When             | Payload                                                            |
+| ---------- | ---------------- | ------------------------------------------------------------------ |
+| `progress` | After each frame | `{ frame, total, pct, fps, elapsed, eta }`                         |
+| `result`   | Once, at the end | `{ fps, frame_width, frame_height, total_frames, n_kpts, frames }` |
 
 The frontend shows the `progress` events in a status bar. When the `result` event arrives, keypoints are stored in a `Map<frameIdx, Keypoint[]>` inside `VideoContext`.
 
@@ -76,12 +76,12 @@ All pure math lives in [`sprintMath.ts`](/frontend/metrics#sprintmathts) — fra
 
 The Viewport renders multiple canvas overlays stacked on top of the video element:
 
-| Overlay | Purpose |
-|---|---|
-| `PoseOverlay` | Draws the 133-keypoint skeleton on each frame |
+| Overlay              | Purpose                                                  |
+| -------------------- | -------------------------------------------------------- |
+| `PoseOverlay`        | Draws the 133-keypoint skeleton on each frame            |
 | `CalibrationOverlay` | Interactive line-drawing tool for pixel-to-metre scaling |
-| `MeasurementOverlay` | Freehand distance and angle measurements |
-| `CropOverlay` | Box selection for video crop |
+| `MeasurementOverlay` | Freehand distance and angle measurements                 |
+| `CropOverlay`        | Box selection for video crop                             |
 
 The Telemetry panel reads from `VideoContext` and renders sparklines. A playhead drawn inside each sparkline tracks the current video frame.
 
