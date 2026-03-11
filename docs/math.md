@@ -88,7 +88,7 @@ The absolute values of both components mean the result is always in $[0°, 90°]
 
 **Why inclination from horizontal for torso and shin?**
 
-For these segments, "vertical" is the ideal reference state — an upright torso and a vertical shin at ground contact are both good sprint mechanics. Measuring from horizontal means 90° is the ideal and deviations from 90° are directly readable as degrees of lean or tilt, which is more intuitive than measuring from vertical (where the ideal would be 0°).
+For these segments, "vertical" is the reference state — an upright torso and a vertical shin at ground contact. Measuring from horizontal means 90° is the reference and deviations from 90° are directly readable as degrees of lean or tilt, which is more intuitive than measuring from vertical (where the reference would be 0°).
 
 ---
 
