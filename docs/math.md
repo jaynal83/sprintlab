@@ -32,24 +32,49 @@ This is the native coordinate system of the pose inference engine. All keypoint 
 
 SprintLab supports both **left-to-right (LTR)** and **right-to-left (RTL)** sprints natively.
 
-### Auto-detection
+### Default
 
-Direction is inferred automatically whenever markers or CoM data change, in priority order:
+The direction always initialises to **LTR**. No inference is attempted before markers are placed — silent auto-detection from raw CoM trajectory was removed because it produced false RTL classifications on LTR videos.
 
-1. **Flying mode with both markers placed** — if the Start (entry) marker has a larger $x$ than the Finish (exit) marker, the athlete is running RTL:
-   $$\text{direction} = \begin{cases} \text{RTL} & \text{if } x_{\text{start}} > x_{\text{finish}} \\ \text{LTR} & \text{otherwise} \end{cases}$$
+### Marker-based inference
 
-2. **Static mode with start marker placed** — if the athlete's initial CoM is to the right of the start line, they are behind it on the right side and running leftward:
-   $$\text{direction} = \begin{cases} \text{RTL} & \text{if } x_{\text{CoM},0} > x_{\text{start}} \\ \text{LTR} & \text{otherwise} \end{cases}$$
+When a sprint marker is placed or moved, direction is inferred from marker geometry and compared to the current setting:
 
-3. **Fallback — CoM trajectory** — compare first and last CoM $x$ positions:
-   $$\text{direction} = \begin{cases} \text{RTL} & \text{if } x_{\text{CoM},N-1} < x_{\text{CoM},0} \\ \text{LTR} & \text{otherwise} \end{cases}$$
+**Flying Sprint Mode** — both Start and Finish markers placed:
+$$\text{suggested} = \begin{cases} \text{RTL} & \text{if } x_{\text{start}} > x_{\text{finish}} \\ \text{LTR} & \text{otherwise} \end{cases}$$
+
+**Static Start Mode** — Start marker placed, first valid CoM frame available:
+$$\text{suggested} = \begin{cases} \text{RTL} & \text{if } x_{\text{CoM},0} > x_{\text{start}} \\ \text{LTR} & \text{otherwise} \end{cases}$$
+
+If the suggested direction differs from the current direction, a confirmation dialog is shown before any change is applied.
+
+### Confirmation dialog
+
+When inferred direction differs from the current setting, an `AlertDialog` appears:
+
+- **Confirm** — applies the new direction and resets sprint markers
+- **Cancel** — keeps the current direction unchanged
+
+The athlete always has the final say; inference is advisory only.
 
 ### Manual override
 
-The **→ LTR / ← RTL** toggle in the viewport header shows the current direction and can be clicked at any time to override. When markers are placed or moved, auto-detection re-runs and may update the direction.
+The **→ LTR / ← RTL** toggle in the viewport header shows the current direction and can be clicked at any time. Switching direction via the toggle immediately resets sprint markers (same reset as confirming the dialog).
 
-An amber banner in the CoM tab ("Right-to-left sprint detected") appears whenever RTL is active, dismissible once the user has confirmed the setting.
+An amber banner in the CoM tab appears whenever RTL is active and can be dismissed once the user has acknowledged the setting.
+
+### What resets on direction change
+
+Whether the change comes from the confirmation dialog or the manual toggle, the following state is cleared so calculations start clean in the new direction:
+
+| State | Reset to |
+|---|---|
+| Start marker | cleared |
+| Finish marker | cleared |
+| CoM events | cleared |
+| Annotation mode | off |
+
+Pose data, calibration, video, and confirmed sprint-start frame are **not** affected.
 
 ### Effect on calculations
 

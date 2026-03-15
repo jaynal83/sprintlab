@@ -446,7 +446,7 @@ function CoMTab({
   const [flyExitOverride, setFlyExitOverride] = useState<number | null>(null);
 
   // Sprint direction drives all sign conventions here.
-  // Auto-detected in Viewport (from marker positions or CoM trajectory); overridable via header toggle.
+  // Inferred from marker geometry when markers are placed (with user confirmation); overridable via header toggle.
   const movingPositive = sprintDirection === 'ltr';
 
   // Dismiss-able RTL confirmation banner state (resets when direction changes).
