@@ -30,6 +30,16 @@ import { useStatus } from './StatusBar/StatusContext';
 import { useVideoContext } from '../VideoContext';
 import { usePose } from '../PoseContext';
 import { useSprintMetrics } from '../useSprintMetrics';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../ui/alert-dialog';
 
 interface VideoMeta {
   src: string;
@@ -92,6 +102,7 @@ export const Viewport = () => {
   >('off');
   const [sprintStart, setSprintStart] = useState<SprintMarker | null>(null);
   const [sprintFinish, setSprintFinish] = useState<SprintMarker | null>(null);
+  const [pendingDirection, setPendingDirection] = useState<'ltr' | 'rtl' | null>(null);
   const [showCoM, setShowCoM] = useState(true);
   const [comEvents, setComEvents] = useState<CoMEvent[]>([]);
   const [showCoMEvents, setShowCoMEvents] = useState(true);
@@ -404,25 +415,10 @@ export const Viewport = () => {
     ctxSetSprintFinish(sprintFinish);
   }, [sprintFinish, ctxSetSprintFinish]);
 
-  // ── Auto-detect sprint direction from marker positions or CoM trajectory ──
-  // Flying: entry marker right of exit marker → RTL.
-  // Static: initial CoM right of start marker → RTL.
-  // Fallback: first-to-last CoM x delta (negative = RTL).
-  // Fires when markers or CoM data change; manual toggle in header overrides.
-  useEffect(() => {
-    const com = metricsWithMerged?.com ?? [];
-    let detected: 'ltr' | 'rtl';
-    if (sprintMode === 'flying' && sprintStart && sprintFinish) {
-      detected = sprintStart.site.x > sprintFinish.site.x ? 'rtl' : 'ltr';
-    } else if (sprintStart && com.length > 0) {
-      detected = (com[0]?.x ?? 0) > sprintStart.site.x ? 'rtl' : 'ltr';
-    } else if (com.length > 1) {
-      detected = com[com.length - 1].x < com[0].x ? 'rtl' : 'ltr';
-    } else {
-      return; // not enough data — leave current direction
-    }
-    ctxSetSprintDirection(detected);
-  }, [sprintStart, sprintFinish, sprintMode, metricsWithMerged, ctxSetSprintDirection]);
+  // Direction is set to LTR by default (VideoContext initial state).
+  // Auto-detection was removed — it caused false RTL on LTR videos.
+  // Direction is now inferred only when markers are placed (see onSetMarker),
+  // with user confirmation via AlertDialog, or via the manual toggle in header.
 
   // ── Suppress unused setter warnings (passed to Telemetry via context) ──────
   void ctxSetReactionTime;
@@ -730,6 +726,15 @@ export const Viewport = () => {
     [videoMeta, resetTransform, resetPose],
   );
 
+  // Reset only sprint analysis state (markers, events, annotate mode).
+  // Does NOT reset pose, video, calibration, or other session state.
+  const resetSprintAnalysis = useCallback(() => {
+    setSprintStart(null);
+    setSprintFinish(null);
+    setComEvents([]);
+    setAnnotateMode('off');
+  }, []);
+
   const handleSeekToFrame = useCallback(
     (frame: number) => {
       setCurrentFrame(Math.max(0, Math.min(frame, totalFrames - 1)));
@@ -898,7 +903,12 @@ export const Viewport = () => {
               {(['ltr', 'rtl'] as const).map((dir) => (
                 <button
                   key={dir}
-                  onClick={() => ctxSetSprintDirection(dir)}
+                  onClick={() => {
+                    if (dir !== sprintDirection) {
+                      ctxSetSprintDirection(dir);
+                      resetSprintAnalysis();
+                    }
+                  }}
                   title={dir === 'ltr' ? 'Left-to-right sprint' : 'Right-to-left sprint'}
                   className={`px-1.5 h-4.5 text-[9px] uppercase tracking-widest transition-colors cursor-pointer border-r border-zinc-300 dark:border-zinc-700 last:border-r-0
                     ${
@@ -1009,8 +1019,27 @@ export const Viewport = () => {
                   sprintStart={sprintStart}
                   sprintFinish={sprintFinish}
                   onSetMarker={(type, frame, site) => {
+                    const nextStart = type === 'start' ? { frame, site } : sprintStart;
+                    const nextFinish = type === 'finish' ? { frame, site } : sprintFinish;
                     if (type === 'start') setSprintStart({ frame, site });
                     else setSprintFinish({ frame, site });
+
+                    // Infer direction from marker positions and suggest if different
+                    let suggested: 'ltr' | 'rtl' | null = null;
+                    if (nextStart && nextFinish) {
+                      // Flying mode: compare start x vs finish x
+                      suggested = nextStart.site.x > nextFinish.site.x ? 'rtl' : 'ltr';
+                    } else if (nextStart) {
+                      // Static mode: compare first CoM x vs start marker x
+                      const com = metricsWithMerged?.com;
+                      const firstCoM = com?.find(Boolean)?.x ?? null;
+                      if (firstCoM !== null) {
+                        suggested = firstCoM > nextStart.site.x ? 'rtl' : 'ltr';
+                      }
+                    }
+                    if (suggested !== null && suggested !== sprintDirection) {
+                      setPendingDirection(suggested);
+                    }
                   }}
                   onClearMarker={(type) => {
                     if (type === 'start') setSprintStart(null);
@@ -1507,6 +1536,40 @@ export const Viewport = () => {
           disabled={!videoMeta}
         />
       </div>
+
+      {/* Sprint direction confirmation dialog */}
+      <AlertDialog open={pendingDirection !== null}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDirection === 'rtl'
+                ? 'Right-to-left sprint detected'
+                : 'Left-to-right sprint detected'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Based on your marker positions, the athlete appears to be
+              sprinting{' '}
+              {pendingDirection === 'rtl' ? 'right → left' : 'left → right'}.
+              Confirm to switch direction and reset sprint markers, or keep the
+              current setting.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingDirection(null)}>
+              Keep {sprintDirection.toUpperCase()}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDirection) ctxSetSprintDirection(pendingDirection);
+                resetSprintAnalysis();
+                setPendingDirection(null);
+              }}
+            >
+              Switch to {pendingDirection?.toUpperCase()}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
