@@ -12,6 +12,8 @@ Pre-built installers are available on the [GitHub Releases page](https://github.
 | macOS | `SprintLab-x.x.x.dmg` | Build from source (see below) |
 | Linux | `SprintLab-x.x.x.AppImage` | Build from source (see below) |
 
+> **Windows users:** Right-click the installer and choose **Run as administrator**. Windows SmartScreen may also show a warning because the binary is not code-signed — click **More info → Run anyway** to proceed.
+
 ---
 
 ## Startup sequence
@@ -185,6 +187,10 @@ FFmpeg runs entirely in the renderer process (no server involvement). The WASM f
 
 **In the browser (web / dev mode):** the page loads from `http://localhost:5173` (a real origin). Files are fetched from the unpkg CDN via `toBlobURL` — the standard approach.
 
+### Sandbox
+
+Electron 20+ defaults `sandbox: true` for renderer processes. Sandboxed preload scripts can only `require` a limited set of modules (`electron`, `events`, `timers`, `url`, `path`). The SprintLab preload uses `fs` (for `readResourceFile`), so the main window sets `sandbox: false` in `webPreferences`. Without this, `require('fs')` crashes the preload script, `window.electronAPI` is never created, and IPC-dependent features (like the fullscreen exit button) silently break.
+
 ### IPC Channels
 
 | Channel | Direction | Purpose |
@@ -260,3 +266,17 @@ copy frontend\node_modules\@ffmpeg\core\dist\esm\ffmpeg-core.js frontend\public\
 ```
 
 **2. Page loaded from `file://` instead of the static server** — if `electron/main.js` loads the frontend via `loadFile()` instead of `loadURL(frontendURL)`, the page gets a null origin and blob URLs break. Ensure the production path uses the local HTTP server (see Architecture above).
+
+### Fullscreen exit button doesn't appear
+
+The "Exit Fullscreen · F11" button in the header relies on `window.electronAPI`, which is created by the preload script. If the preload crashes, the API is never exposed and the button silently doesn't render.
+
+**Most likely cause:** `sandbox` is not set to `false` in the main window's `webPreferences`. Electron 20+ defaults sandbox to `true`, which blocks `require('fs')` in the preload — crashing it before `contextBridge.exposeInMainWorld` runs. Ensure `electron/main.js` has:
+```js
+webPreferences: {
+  preload: path.join(__dirname, 'preload.js'),
+  contextIsolation: true,
+  nodeIntegration: false,
+  sandbox: false,
+}
+```

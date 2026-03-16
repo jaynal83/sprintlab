@@ -1,7 +1,7 @@
 ![Logo](https://github.com/mvch1ne/sprintlab/blob/main/frontend/public/logo.png)
 ![Logo](https://github.com/mvch1ne/sprintlab/blob/main/frontend/public/thumbnail.png)
 
-SprintLab is a web application I made to help sprinters perform kinematic analysis on their training videos so they can gain insights and improve their performance. It's a React single-page app built with TypeScript, and coupled with a Python backend built with FastAPI and RTMLib for highly accurate, research-level pose estimation and tracking of body landmarks.
+SprintLab is a desktop application I made to help sprinters perform kinematic analysis on their training videos so they can gain insights and improve their performance. It's built with Electron and a React/TypeScript frontend, and coupled with a Python backend built with FastAPI and RTMLib for highly accurate, research-level pose estimation and tracking of body landmarks. The desktop app bundles everything into a single installer — no Python, no server setup, just download and run.
 
 The app lets users upload videos, calibrate real-world distances and compute performance metrics like ground contact times, stride length, joint angles, linear and angular velocities, acceleration, and more — all from just a video.
 
@@ -39,6 +39,8 @@ A pre-built Windows installer is available on the [**Releases page**](https://gi
 | Windows  | `SprintLab Setup x.x.x.exe` (NSIS installer)  | Available on Releases page |
 | macOS    | `SprintLab-x.x.x.dmg`                         | Build from source (see below) |
 | Linux    | `SprintLab-x.x.x.AppImage`                    | Build from source (see below) |
+
+> **Windows users:** Right-click the installer and choose **Run as administrator**. Windows SmartScreen may also show a warning because the binary is not code-signed — click **More info → Run anyway** to proceed.
 
 > **Note:** On first launch, SprintLab downloads the ONNX pose-estimation model weights (~70 MB) and caches them locally. An internet connection is required for this one-time download.
 
@@ -97,6 +99,13 @@ Video trimming, cropping, and export are handled entirely in the browser using F
 ---
 
 ## Tech Stack
+
+### Desktop
+
+| Concern          | Library / Tool                            |
+| ---------------- | ----------------------------------------- |
+| Shell            | Electron 36                               |
+| Packaging        | electron-builder (NSIS / DMG / AppImage)  |
 
 ### Frontend
 

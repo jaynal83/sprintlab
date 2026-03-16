@@ -2,10 +2,6 @@
 
 ## Next Steps
 
-- Continue: When we're in fullscreen mode, the user needs to have a way to get out of there without knowing the shortcut. The code has already been written but for some reason, the button is not showing up on the header once we're in fullscreen.
-- Rebuild the Electron application and
-- Run the GitHub release now that we have built the Windows version so that people can download it.
-- Update README to reflect that it's now a desktop application instead of a web application.
 - Change image in the README.md to a suitable .GIF that demonstrates the project's features succintly.
 
 ## Future Work
