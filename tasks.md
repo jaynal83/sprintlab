@@ -2,9 +2,11 @@
 
 ## Next Steps
 
-- When we're in fullscreen mode, the user needs to have a way to get out of there without knowing the shortcut.
-- I don't think the reaction time value and toggle are being integrated and toggled in our calculations. Can you check that and rectify if necessary?
-- How do I get the installer files uploaded so the user can download from Github? At least let's do it for the windows and leave the other OSes to build for themselves.
+- Continue: When we're in fullscreen mode, the user needs to have a way to get out of there without knowing the shortcut.
+- Rebuild the Electron application.
+- Continue with the GitHub release now that we have built the Windows version
+- Update README to reflect that it's a desktop application instead of a web application now
+- Change image in the README.md to a suitable .GIF that demonstrates the project's features succintly.
 
 ## Future Work
 
