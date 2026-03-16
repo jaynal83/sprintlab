@@ -489,6 +489,7 @@ function CoMTab({
     gateAccel: number[],
     relDisp: (fi: number) => number,
     speedSubLabel: string,
+    getTime?: (fi: number) => number,
   ) => (
     <>
       <SectionHead label="Displacement (m)" color={color} />
@@ -553,6 +554,7 @@ function CoMTab({
                   {[
                     '#',
                     'Frame',
+                    ...(getTime ? ['Time (s)'] : []),
                     'Speed (m/s)',
                     'Accel (m/s²)',
                     'Disp (m)',
@@ -578,6 +580,11 @@ function CoMTab({
                       <td className="px-1.5 py-0.5 tabular-nums text-zinc-500">
                         {evt.frame}
                       </td>
+                      {getTime && (
+                        <td className="px-1.5 py-0.5 tabular-nums text-violet-300">
+                          {relDisp(ef) < 0 ? '—' : getTime(ef).toFixed(3)}
+                        </td>
+                      )}
                       <td
                         className="px-1.5 py-0.5 tabular-nums"
                         style={{ color }}
@@ -755,6 +762,7 @@ function CoMTab({
           gateAccel,
           relDisp,
           'Instantaneous |dCoM/dt|',
+          (fi) => (fi - startIdx) / fps + RT,
         )}
       </div>
     );

@@ -32,13 +32,13 @@ This project is very personal to me. As an athlete and engineer from Ghana, West
 
 ## Download
 
-Pre-built installers for Windows, macOS, and Linux are available on the [**Releases page**](https://github.com/mvch1ne/sprintlab/releases).
+A pre-built Windows installer is available on the [**Releases page**](https://github.com/mvch1ne/sprintlab/releases).
 
-| Platform | File |
-| -------- | ---- |
-| Windows  | `SprintLab Setup x.x.x.exe` (NSIS installer) |
-| macOS    | `SprintLab-x.x.x.dmg` |
-| Linux    | `SprintLab-x.x.x.AppImage` |
+| Platform | File                                          | Notes |
+| -------- | --------------------------------------------- | ----- |
+| Windows  | `SprintLab Setup x.x.x.exe` (NSIS installer)  | Available on Releases page |
+| macOS    | `SprintLab-x.x.x.dmg`                         | Build from source (see below) |
+| Linux    | `SprintLab-x.x.x.AppImage`                    | Build from source (see below) |
 
 > **Note:** On first launch, SprintLab downloads the ONNX pose-estimation model weights (~70 MB) and caches them locally. An internet connection is required for this one-time download.
 
@@ -190,6 +190,9 @@ cd backend
 pip install -r requirements.txt
 uvicorn server:app --port 8000 --reload
 
+Shortcut:
+cd backend && pip install -r requirements.txt && uvicorn server:app --port 8000 --reload
+
 # Terminal 2 — start Electron + Vite together
 npm install        # root (first time only)
 npm run electron:dev
@@ -258,11 +261,11 @@ This renders the SprintLab SVG logo to `build/icon.png` (1024×1024) and generat
 npm run electron:build
 ```
 
-| Platform | Output file |
-| -------- | ----------- |
-| Windows  | `dist-electron/SprintLab Setup x.x.x.exe` |
+| Platform | Output file                                                 |
+| -------- | ----------------------------------------------------------- |
+| Windows  | `dist-electron/SprintLab Setup x.x.x.exe`                   |
 | macOS    | `dist-electron/SprintLab-x.x.x.dmg` _(must build on macOS)_ |
-| Linux    | `dist-electron/SprintLab-x.x.x.AppImage` |
+| Linux    | `dist-electron/SprintLab-x.x.x.AppImage`                    |
 
 > **Cross-compilation:** macOS `.dmg` can only be produced on a macOS machine. Windows and Linux builds can be produced on any platform with the right toolchain.
 

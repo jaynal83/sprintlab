@@ -26,6 +26,7 @@ export default defineConfig({
         items: [
           { text: 'Introduction', link: '/' },
           { text: 'Architecture', link: '/architecture' },
+          { text: 'Desktop App', link: '/desktop_app' },
         ],
       },
       {

@@ -9,6 +9,12 @@ const Header = () => {
   const [helpOpen, setHelpOpen] = useState(false);
   // showOnStartup = true means the modal WILL appear next time (i.e. not dismissed)
   const [showOnStartup, setShowOnStartup] = useState(!isHelpDismissed());
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    window.electronAPI.onFullscreenChange(setIsFullscreen);
+  }, []);
 
   // Auto-open on first visit (when not previously dismissed)
   useEffect(() => {
@@ -29,6 +35,14 @@ const Header = () => {
     <header className="h-10 w-full flex justify-items-start items-center px-3 border border-zinc-400 dark:border-zinc-600 bg-white dark:bg-zinc-950">
       <AppLogo />
       <div className="ml-auto flex items-center gap-2">
+        {isFullscreen && window.electronAPI && (
+          <button
+            onClick={() => window.electronAPI!.exitFullscreen()}
+            className="text-xs font-mono px-2 py-0.5 rounded border border-zinc-600 text-zinc-400 hover:text-zinc-200 hover:border-zinc-400 transition-colors cursor-pointer"
+          >
+            Exit Fullscreen · F11
+          </button>
+        )}
         <button
           onClick={() => setHelpOpen(true)}
           title="Help & getting started"

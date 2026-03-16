@@ -194,6 +194,17 @@ app.whenReady().then(async () => {
 
   createMainWindow();
 
+  mainWindow.on('enter-full-screen', () => {
+    mainWindow.webContents.send('fullscreen-change', true);
+  });
+  mainWindow.on('leave-full-screen', () => {
+    mainWindow.webContents.send('fullscreen-change', false);
+  });
+
+  ipcMain.on('exit-fullscreen', () => {
+    if (mainWindow) mainWindow.setFullScreen(false);
+  });
+
   app.on('activate', () => {
     // macOS: re-create window when dock icon is clicked with no windows open
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
