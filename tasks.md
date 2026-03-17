@@ -4,6 +4,8 @@
 
 - Windows and maybe some antivirus software seems to be treating the software like malware - affecting the installation for some people. How do we build the .exe so that everything checks out, installs and runs smoothly?
 
+- Some users have issues with installation. Need to create a YouTube video walking through the troubleshooting of likely issues.
+
 ### UI Revamp
 
 - Phase 0: Foundation — ✅ Done. Extracted 7 hooks from Viewport (1575→889 lines), split Telemetry into 5 sub-components (1309→244 lines), split ControlPanel into 6 sub-components (613→257 lines). UIContext deferred to Phase 1.
