@@ -237,3 +237,17 @@ This is solvable in principle — background feature detection, RANSAC homograph
 Wide-angle and smartphone lenses introduce barrel distortion that curves straight lines, especially near frame edges. SprintLab applies no distortion correction, so keypoints detected near the frame periphery have slightly wrong positions. The error is typically small for modern smartphone lenses at reasonable filming distances, but it's non-zero and it's systematic — it biases distance measurements in a consistent direction depending on where in the frame the athlete is.
 
 Correction is possible (camera intrinsic calibration via checkerboard patterns, or lookup by device model) but adds significant UX friction for a relatively small accuracy gain in typical use cases. It becomes more important if the system is ever used with action cameras or wide-angle lenses.
+
+---
+
+## Future Directions
+
+### Multi-Camera Stitching for Full 100m Analysis
+
+SprintLab currently analyzes a single camera's field of view (10–30m). A natural extension is multi-camera coverage: five static cameras each covering 20m with 2–3m overlap, independently calibrated, producing a stitched kinematic profile across an entire 100m sprint.
+
+This would yield a full-race velocity curve, per-step force-velocity profiling across the complete acceleration phase, and contact time progression from block start to finish — data that currently requires timing gate arrays or instrumented treadmills.
+
+Key engineering requirements: temporal synchronization across cameras (shared audio event or cross-correlation of pose data in overlap zones), spatial registration to a common world coordinate system (known markers at camera boundaries), consistent frame rate enforcement, and a merge layer that blends or selects data in transition zones.
+
+**Prerequisite:** The single-camera analysis must be validated and the improvements in this document (particularly Phase 1, Kalman filtering, and contact detection) should be complete first. Multi-camera stitching amplifies every per-camera error. Design the metrics engine output format to be camera-agnostic (world-space positions, not pixel coordinates) so the merge layer is straightforward to build when the time comes.
