@@ -1,5 +1,15 @@
 # SprintLab — Limitations & Improvement Paths
 
+## Validation
+
+SprintLab currently has no ground-truth validation against lab-grade instrumentation. Every metric in this document — joint angles, contact times, CoM trajectory, step lengths, and all proxy metrics — has an unknown error budget. Without validation data, it is not possible to confidently state which metrics are reliable enough for training decisions and which are directional estimates at best.
+
+**Opportunity:** Dr. Marcus Schmidt at TU Dortmund University has offered to perform a validation study in their movement analysis lab. This would provide marker-based motion capture and force plate data as ground truth against SprintLab's monocular video estimates. This is a high-priority opportunity — a published validation study would establish error bounds on every metric, provide calibration targets for the automated S-MAS scoring thresholds (item #8), inform which improvements in this document to prioritize, and give SprintLab peer-reviewed credibility.
+
+**Status:** Offered via LinkedIn. Reach out to Dr. Schmidt directly to begin scoping the study.
+
+---
+
 ## Improvable Limitations
 
 ### 1. Null-Filling Creates Freeze-Snap Artifacts
