@@ -16,8 +16,8 @@
 - Phase 1: Stage-Based Workflow — ✅ Done. Added UIContext (stage, completion, hasVideo), StageBar with 5 workflow stages (Import/Calibrate/Analyse/Measure/Report), completion indicators, auto-advance on video load, stage-aware control dimming in ControlPanel.
 - Phase 2: Visual Polish — ✅ Done. Figtree (sans) for UI / TheSansMonoSCd (mono) for data, glassmorphism + backdrop-blur on all panels, per-stage accent colors (sky/amber/violet/emerald/orange), active:scale micro-interactions on buttons, interactive sparklines with hover tooltip + crosshair.
 - Phase 3: Multi-Lane Timeline — ✅ Done. Replaced scrubber with 4-lane zoomable timeline (frame ruler, ground contacts, CoM events, speed sparkline). Scroll to zoom, shift+scroll/alt+drag to pan, auto-pan follows playhead, minimap when zoomed. Control section now auto-sizes to content instead of fixed height.
+- Phase 4: Command Palette — ✅ Done. Ctrl+K searchable palette (cmdk) with 25+ actions across 6 groups (Navigation, Playback, Tools, Sprint, View, File). CommandContext action registry decouples producers from consumers. Global keyboard shortcuts (Space, arrows, 1-5, C/P/T, [/]). Clickable Ctrl+K badge in Header. Custom thin zinc scrollbar applied app-wide.
 
-- Phase 4: Command Palette — Ctrl+K searchable action palette with keyboard shortcuts for all major actions (cmdk library)
 - Phase 5: Annotation Layer — Frame-pinned drawing tools (pen, arrow, circle, text) with PNG export for coach-athlete feedback
 - Phase 6: Split-View Comparison — Side-by-side or overlay dual-video mode with synced playback and telemetry diff for athlete comparison
 - Phase 7: Detachable Panels — Electron-only pop-out windows for telemetry/timeline on secondary monitors
