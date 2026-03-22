@@ -93,6 +93,19 @@ The Viewport renders multiple canvas overlays stacked on top of the video elemen
 
 The Telemetry panel is a thin tab shell that reads from `VideoContext` and delegates rendering to sub-components (`ContactsTab`, `CoMTab`, `JointRow`, `Sparkline`). A playhead drawn inside each sparkline tracks the current video frame.
 
+### Timeline
+
+The `Timeline` component replaces the simple scrubber bar with a multi-lane, zoomable timeline. It reads ground contacts, CoM events, speed data, and sprint markers directly from `VideoContext`. Four lanes are stacked vertically:
+
+| Lane | Content |
+| ---- | ------- |
+| **Frame ruler** | Adaptive tick marks + frame numbers (interval adjusts to zoom level) |
+| **Contacts (GC)** | Coloured blocks — green for left foot, orange for right foot |
+| **Events (EV)** | Violet dots for CoM events, sky/red triangles for sprint start/finish |
+| **Speed (SPD)** | SVG polyline of horizontal CoM speed |
+
+A vertical playhead spans all lanes. When zoomed in, a minimap bar below the timeline shows the visible region within the full clip. The control section auto-sizes to its content rather than using a fixed height.
+
 ## Stage-Based Workflow
 
 The UI is organised around five sequential stages. A `StageBar` at the top of the control section shows progress:

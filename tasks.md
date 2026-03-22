@@ -16,7 +16,9 @@
 - Phase 6: Split-View Comparison — Side-by-side or overlay dual-video mode with synced playback and telemetry diff for athlete comparison
 - Phase 7: Detachable Panels — Electron-only pop-out windows for telemetry/timeline on secondary monitors
 
-- Review limitations.md and get work on fixing what's fixable
+###
+
+- Review limitations-improvement-paths.md and get work on fixing what's fixable
 
 ## Future Work
 
