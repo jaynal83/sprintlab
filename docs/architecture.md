@@ -138,6 +138,34 @@ A minimal context for pose processing status: `idle | loading | ready | error`. 
 
 `VideoContext` is large — it covers video state, calibration, and metrics all in one place to avoid deeply nested prop drilling. `PoseContext` is kept separate because its state is only relevant to a small number of components and changes at a different lifecycle (only during inference). `UIContext` owns presentation-layer state (stage navigation, completion indicators) that multiple components need but that doesn't belong in the data-oriented `VideoContext`.
 
+## Visual System
+
+### Typography
+
+Two-font system: **Figtree Variable** (`font-sans`) for UI text (labels, headers, buttons) and **TheSansMonoSCd** (`font-mono`) for data (readouts, timecodes, tables, sparkline tooltips). The base font is Figtree; data-heavy elements opt in to mono via Tailwind's `font-mono` class.
+
+### Stage Accent Colors
+
+Each workflow stage has a unique accent color used in the StageBar tab, active badge, and indicator bar:
+
+| Stage     | Color   |
+| --------- | ------- |
+| Import    | Sky     |
+| Calibrate | Amber   |
+| Analyse   | Violet  |
+| Measure   | Emerald |
+| Report    | Orange  |
+
+Accent tokens are exported from `UIContext` as `STAGE_ACCENT` for use across components.
+
+### Depth & Glassmorphism
+
+Panels use `bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm` for a frosted-glass effect. The control section casts an upward shadow (`shadow-[0_-2px_8px_...]`) to separate it from the viewport. Overlay side panels (PosePanel, MeasurementPanel, TrimCropPanel) use `backdrop-blur-sm` with 95% opacity backgrounds.
+
+### Micro-interactions
+
+All icon buttons and stage tabs use `active:scale-90` (or `active:scale-95` for stage tabs) for tactile press feedback. Transitions use `duration-150` for responsiveness.
+
 ## Design Decisions
 
 ### SSE instead of WebSockets

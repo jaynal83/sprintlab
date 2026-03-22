@@ -38,7 +38,7 @@ export function JointRow({
           </span>
         </div>
       </div>
-      <Sparkline data={spark} color={color} height={18} playheadPct={pct} />
+      <Sparkline data={spark} color={color} height={18} playheadPct={pct} unit="°" />
     </div>
   );
 }

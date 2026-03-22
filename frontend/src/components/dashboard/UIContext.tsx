@@ -13,6 +13,15 @@ import type { ReactNode } from 'react';
 export const STAGES = ['import', 'calibrate', 'analyse', 'measure', 'report'] as const;
 export type Stage = (typeof STAGES)[number];
 
+/** Accent color tokens per stage (Tailwind class fragments). */
+export const STAGE_ACCENT: Record<Stage, { bg: string; text: string; border: string; ring: string }> = {
+  import:    { bg: 'bg-sky-500',     text: 'text-sky-500',     border: 'border-sky-500',     ring: 'ring-sky-500/30' },
+  calibrate: { bg: 'bg-amber-500',   text: 'text-amber-500',   border: 'border-amber-500',   ring: 'ring-amber-500/30' },
+  analyse:   { bg: 'bg-violet-500',  text: 'text-violet-500',  border: 'border-violet-500',  ring: 'ring-violet-500/30' },
+  measure:   { bg: 'bg-emerald-500', text: 'text-emerald-500', border: 'border-emerald-500', ring: 'ring-emerald-500/30' },
+  report:    { bg: 'bg-orange-500',  text: 'text-orange-500',  border: 'border-orange-500',  ring: 'ring-orange-500/30' },
+};
+
 export interface StageCompletion {
   import: boolean;
   calibrate: boolean;

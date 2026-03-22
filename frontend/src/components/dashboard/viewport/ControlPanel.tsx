@@ -123,7 +123,7 @@ export function ControlPanel({
   return (
     <TooltipProvider delayDuration={400}>
       <div
-        className={`ControlPanelContainer h-full w-full flex flex-col bg-white dark:bg-zinc-950 dark:text-zinc-200 transition-opacity ${disabled ? 'opacity-40 pointer-events-none' : ''}`}
+        className={`ControlPanelContainer h-full w-full flex flex-col bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm dark:text-zinc-200 transition-opacity ${disabled ? 'opacity-40 pointer-events-none' : ''}`}
       >
         <div className="MainControls flex-1 border border-zinc-400 dark:border-zinc-600 flex flex-col overflow-hidden">
           {/* Scrubber */}
